@@ -185,7 +185,7 @@
   /* ---- STATS BAR ---- */
   .stats-bar {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 1px;
     background: var(--border);
     border-bottom: 1px solid var(--border);
@@ -737,8 +737,30 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
 
   /* ---- RESPONSIVE ---- */
+  /* ---- DUPLICATE STYLES ---- */
+  .dupe-badge {
+    background: rgba(224, 92, 92, 0.15);
+    border: 1px solid rgba(224, 92, 92, 0.35);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  tr.is-dupe td { background: rgba(224, 92, 92, 0.04); }
+  tr.is-dupe:hover td { background: rgba(224, 92, 92, 0.09) !important; }
+  tr.is-dupe td:first-child { border-left: 2px solid var(--red); }
+
+  .stat-card.dupe-card .stat-value { color: var(--red); }
+
   @media (max-width: 800px) {
-    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    .stats-bar { grid-template-columns: repeat(4, 1fr); }
     .controls { padding: 12px 16px; }
     .content { padding: 20px 16px; }
     header { padding: 0 16px; }
@@ -963,6 +985,37 @@
     min-height: 18px;
   }
 
+  /* ---- LOADING STATE ---- */
+  #loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 80px 40px;
+  }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-label {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 20px;
+  }
+
+  .loading-label span { color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -1003,19 +1056,28 @@
 
 <!-- LOAD ZONE -->
 <div id="load-zone">
-  <div class="drop-area" id="drop-area">
+
+  <!-- Shown while auto-loading -->
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <div class="loading-label" id="loading-label">Looking for data files...</div>
+  </div>
+
+  <!-- Shown only if auto-load fails -->
+  <div class="drop-area" id="drop-area" style="display:none">
     <div class="drop-icon">💾</div>
-    <div class="drop-title">Load data.json</div>
-    <div class="drop-sub">Drag & drop your data.json file here<br>or click to browse</div>
-    <button class="btn-load" onclick="document.getElementById('file-input').click()">Browse File</button>
+    <div class="drop-title">Load JSON File(s)</div>
+    <div class="drop-sub">Drag & drop one or multiple .json files here<br>or click to browse — they will be auto-merged</div>
+    <button class="btn-load" onclick="document.getElementById('file-input').click()">Browse Files</button>
     <div class="or-demo">— or —</div>
     <button class="btn-demo" onclick="loadDemo()">Load Demo Data</button>
     <p style="font-size:11px; color:var(--muted); margin-top:16px; font-family:var(--mono)">
-      Run <strong style="color:var(--accent)">program.bat</strong> first to generate data.json
+      Select all your <strong style="color:var(--accent)">combined_data_*.json</strong> files at once
     </p>
   </div>
+
   <div id="autoload-status"></div>
-  <input type="file" id="file-input" accept=".json" onchange="handleFileInput(event)">
+  <input type="file" id="file-input" accept=".json" multiple onchange="handleFileInput(event)">
   <div id="recent-files"></div>
 </div>
 
@@ -1053,6 +1115,11 @@
       <div class="stat-value" id="s-drives">0</div>
       <div class="stat-sub" id="s-drives-list">—</div>
     </div>
+    <div class="stat-card dupe-card">
+      <div class="stat-label">Duplicates</div>
+      <div class="stat-value" id="s-dupes">0</div>
+      <div class="stat-sub" id="s-dupes-sub">same path+name</div>
+    </div>
   </div>
 
   <!-- CONTROLS -->
@@ -1072,6 +1139,11 @@
     </select>
     <select class="filter-select" id="filter-drive" onchange="applyFilters()">
       <option value="">All Drives</option>
+    </select>
+    <select class="filter-select" id="filter-dupe" onchange="applyFilters()">
+      <option value="">All Files</option>
+      <option value="dupe">Duplicates Only</option>
+      <option value="unique">Unique Only</option>
     </select>
     <select class="filter-select" id="sort-by" onchange="applyFilters()">
       <option value="date_desc">Newest First</option>
@@ -1170,26 +1242,61 @@ window.addEventListener('DOMContentLoaded', () => {
 //  AUTO-LOAD combined_data.json (when hosted on GitHub Pages)
 // ============================================================
 async function autoLoadData() {
-  // Only auto-fetch when running on a real server (not local file://)
-  if (location.protocol === 'file:') return;
+  const labelEl   = document.getElementById('loading-label');
+  const loadingEl = document.getElementById('loading-state');
+  const dropEl    = document.getElementById('drop-area');
 
-  const statusEl = document.getElementById('autoload-status');
-  const candidates = ['combined_data.json', 'data.json'];
+  function setLabel(text) { if (labelEl) labelEl.innerHTML = text; }
 
-  for (const filename of candidates) {
+  function showPicker() {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (dropEl)    dropEl.style.display    = 'block';
+  }
+
+  // Show spinner (already visible by default after login)
+  if (loadingEl) loadingEl.style.display = 'flex';
+  if (dropEl)    dropEl.style.display    = 'none';
+
+  // --- Try filelist.json first ---
+  try {
+    setLabel('Looking for <span>filelist.json</span>...');
+    const res = await fetch('filelist.json');
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list) && list.length) {
+        setLabel(`Loading <span>${list.length} file(s)</span>...`);
+        const jsons = [];
+        for (const filename of list) {
+          try {
+            setLabel(`Loading <span>${filename}</span>...`);
+            const r = await fetch(filename);
+            if (!r.ok) continue;
+            const text = await r.text();
+            jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
+          } catch(e) {}
+        }
+        if (jsons.length) {
+          initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
+          return;
+        }
+      }
+    }
+  } catch(e) {}
+
+  // --- Fallback: try common single-file names ---
+  for (const filename of ['combined_data.json', 'data.json']) {
     try {
-      statusEl.textContent = `⏳ Loading ${filename}...`;
+      setLabel(`Loading <span>${filename}</span>...`);
       const res = await fetch(filename);
       if (!res.ok) continue;
-      const json = await res.json();
-      statusEl.textContent = `✓ Loaded ${filename}`;
-      setTimeout(() => { statusEl.textContent = ''; }, 2000);
-      initDashboard(json);
+      const text = await res.text();
+      initDashboard(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
       return;
     } catch(e) { continue; }
   }
 
-  statusEl.textContent = 'No data file found. Upload combined_data.json to your repo.';
+  // Nothing found — reveal the file picker
+  showPicker();
 }
 
 // ============================================================
@@ -1212,8 +1319,8 @@ function saveRecent(filename, json) {
       timestamp: new Date().toISOString(),
       totalFiles: (json.files || []).length,
       drive: info.drive || '—',
-      scanDate: info.scan_date || '—',
-      data: json
+      scanDate: info.scan_date || '—'
+      // data not stored — files are too large for localStorage
     });
     if (recent.length > MAX_RECENT) recent.length = MAX_RECENT;
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
@@ -1249,8 +1356,8 @@ function renderRecent() {
 }
 
 function loadRecent(idx) {
-  const recent = getRecent();
-  if (recent[idx]) initDashboard(recent[idx].data);
+  // Recent entries no longer cache data — prompt user to reload the file
+  alert('Recent history is for reference only.\nDrag & drop your JSON file(s) again to load them.');
 }
 
 // ============================================================
@@ -1274,27 +1381,87 @@ dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover
 dropArea.addEventListener('drop', e => {
   e.preventDefault();
   dropArea.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) readFile(file);
+  if (e.dataTransfer.files.length) readFiles(e.dataTransfer.files);
 });
 
 function handleFileInput(event) {
-  const file = event.target.files[0];
-  if (file) readFile(file);
+  if (event.target.files.length) readFiles(event.target.files);
 }
 
-function readFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error(file.name));
+    reader.readAsText(file);
+  });
+}
+
+async function readFiles(fileList) {
+  const files = Array.from(fileList).filter(f => f.name.endsWith('.json'));
+  if (!files.length) return;
+
+  const jsons = [];
+  const errors = [];
+
+  for (const file of files) {
     try {
-      const json = JSON.parse(e.target.result);
-      saveRecent(file.name, json);
-      initDashboard(json);
-    } catch(err) {
-      alert('Invalid JSON file. Please make sure you run program.bat first.');
+      let text = await readFileAsync(file);
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      jsons.push(JSON.parse(text));
+    } catch(e) {
+      errors.push(file.name);
     }
+  }
+
+  if (errors.length) {
+    alert(`Could not parse:\n${errors.join('\n')}\n\nTip: Re-run merge.bat to regenerate these files.`);
+  }
+  if (!jsons.length) return;
+
+  const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+  const label  = files.length === 1 ? files[0].name : `${files.length} files merged`;
+  saveRecent(label, merged);
+  initDashboard(merged);
+}
+
+function mergeJsons(jsons) {
+  const allFiles  = [];
+  const allDrives = new Set();
+  let totalSizeGb = 0;
+
+  for (const json of jsons) {
+    allFiles.push(...(json.files || []));
+    const info   = json.scan_info || {};
+    const drives = info.drives || (info.drive ? [info.drive] : []);
+    drives.forEach(d => allDrives.add(d));
+    totalSizeGb += parseFloat(info.total_size_gb || 0);
+  }
+
+  // Mark duplicates by path + name (keep all, tag dupes)
+  const seen     = new Set();
+  let   dupCount = 0;
+  allFiles.forEach(f => {
+    const key = `${f.path}|${f.name}`;
+    f.is_duplicate = seen.has(key);
+    if (f.is_duplicate) dupCount++;
+    else seen.add(key);
+  });
+
+  const driveList = [...allDrives].sort();
+  return {
+    scan_info: {
+      scan_date:       new Date().toISOString().slice(0,16).replace('T',' '),
+      drive:           driveList.join(', '),
+      drives:          driveList,
+      total_files:     allFiles.length,
+      unique_files:    allFiles.length - dupCount,
+      duplicate_count: dupCount,
+      total_size_gb:   totalSizeGb.toFixed(2),
+      generated_by:    `Merged from ${jsons.length} files`
+    },
+    files: allFiles
   };
-  reader.readAsText(file);
 }
 
 function reloadFile() {
@@ -1386,6 +1553,8 @@ function initDashboard(json) {
   });
   const driveKeys = Object.keys(driveMap).sort();
 
+  const dupeCount = allData.filter(f => f.is_duplicate).length;
+
   document.getElementById('s-total').textContent = allData.length.toLocaleString();
   document.getElementById('s-size').textContent = totalGb > 1000 ? (totalGb/1000).toFixed(1)+' TB' : totalGb.toFixed(1)+' GB';
   document.getElementById('s-projects').textContent = projects.length;
@@ -1393,6 +1562,8 @@ function initDashboard(json) {
   document.getElementById('s-drive').textContent = 'label: ' + (info.drive_name || info.drive || '—');
   document.getElementById('s-drives').textContent = driveKeys.length || '—';
   document.getElementById('s-drives-list').textContent = driveKeys.map(k => driveMap[k]).join(', ') || '—';
+  document.getElementById('s-dupes').textContent = dupeCount.toLocaleString();
+  document.getElementById('s-dupes-sub').textContent = dupeCount ? `of ${allData.length.toLocaleString()} total` : 'no duplicates';
 
   if(dates.length) {
     const from = dates[0].slice(0,7);
@@ -1452,6 +1623,7 @@ function applyFilters() {
   const type = document.getElementById('filter-type').value;
   const dateRange = document.getElementById('filter-date').value;
   const drive = document.getElementById('filter-drive').value;
+  const dupeFilter = document.getElementById('filter-dupe').value;
   const sort = document.getElementById('sort-by').value;
 
   filtered = allData.filter(f => {
@@ -1466,6 +1638,8 @@ function applyFilters() {
     if(type && f.extension !== type) return false;
     if(dateRange && (f.date_modified||'').slice(0,4) !== dateRange) return false;
     if(drive && (f.drive||'').toUpperCase() !== drive) return false;
+    if(dupeFilter === 'dupe'   && !f.is_duplicate) return false;
+    if(dupeFilter === 'unique' &&  f.is_duplicate) return false;
     return true;
   });
 
@@ -1537,14 +1711,16 @@ function renderTable() {
   page.forEach((f, i) => {
     const sz = parseFloat(f.size_mb||0);
     const szStr = sz > 1024 ? (sz/1024).toFixed(2)+' GB' : sz.toFixed(1)+' MB';
-    html += `<tr onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
+    const dupeClass = f.is_duplicate ? ' is-dupe' : '';
+    const dupeBadge = f.is_duplicate ? '<span class="dupe-badge">DUPE</span>' : '';
+    html += `<tr class="row${dupeClass}" onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
       <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${start+i+1}</td>
       <td style="font-family:var(--mono);font-size:11px;white-space:nowrap" title="${f.drive_name||f.drive||''}">
         <span style="color:var(--text)">${f.drive_name || f.drive || '—'}</span>
       </td>
       <td class="td-project" title="${f.project}">${f.project||'—'}</td>
       <td class="td-path" title="${f.sub_folder}">${f.sub_folder||'—'}</td>
-      <td class="td-name" title="${f.name}">${f.name}</td>
+      <td class="td-name" title="${f.name}" style="display:flex;align-items:center;gap:0">${f.name}${dupeBadge}</td>
       <td><span class="td-ext">${(f.extension||'?').toUpperCase()}</span></td>
       <td class="td-size">${szStr}</td>
       <td class="td-date">${f.date_modified||'—'}</td>
