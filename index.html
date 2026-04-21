@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDD Asset Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0e10;
+    --bg2:       #13151a;
+    --bg3:       #1a1d24;
+    --border:    #2a2d35;
+    --accent:    #f5a623;
+    --accent2:   #e8834a;
+    --text:      #e8eaf0;
+    --muted:     #5a5e6b;
+    --muted2:    #3a3d47;
+    --green:     #4caf82;
+    --red:       #e05c5c;
+    --blue:      #5b9cf6;
+    --purple:    #a78bfa;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    background: rgba(13,14,16,0.95);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+  }
+
+  .logo-text {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .scan-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .scan-info span { color: var(--accent); }
+
+  /* ---- LOAD ZONE ---- */
+  #load-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 64px);
+    gap: 24px;
+  }
+
+  .drop-area {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 64px 80px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    max-width: 540px;
+    width: 100%;
+  }
+
+  .drop-area:hover, .drop-area.dragover {
+    border-color: var(--accent);
+    background: rgba(245,166,35,0.04);
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .drop-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 24px;
+  }
+
+  .btn-load {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-load:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .or-demo {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 16px;
+    font-family: var(--mono);
+  }
+
+  .btn-demo {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+
+  .btn-demo:hover { border-color: var(--accent); color: var(--accent); }
+
+  input[type=file] { display: none; }
+
+  /* ---- MAIN DASHBOARD ---- */
+  #dashboard { display: none; }
+
+  /* ---- STATS BAR ---- */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    padding: 20px 24px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ---- CONTROLS ---- */
+  .controls {
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px 9px 36px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    min-width: 130px;
+  }
+
+  .filter-select:focus { border-color: var(--accent); }
+
+  .view-tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tab-btn:hover { color: var(--text); border-color: var(--muted2); }
+  .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* ---- CONTENT AREA ---- */
+  .content {
+    padding: 28px 32px;
+  }
+
+  /* ---- GRID VIEW (By Project) ---- */
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .project-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .project-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.2s;
+    transform-origin: left;
+  }
+
+  .project-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .project-card:hover::before { transform: scaleX(1); }
+
+  .pc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .pc-name {
+    font-size: 15px;
+    font-weight: 700;
+    word-break: break-word;
+    flex: 1;
+    margin-right: 8px;
+  }
+
+  .pc-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .pc-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .pc-stat { font-family: var(--mono); }
+  .pc-stat .v { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .pc-stat .l { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+  .pc-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .type-pill {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    color: var(--blue);
+    text-transform: uppercase;
+  }
+
+  .pc-date {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ---- TABLE VIEW ---- */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--bg3);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  thead th:hover { color: var(--accent); }
+  thead th.sorted { color: var(--accent); }
+
+  .sort-arrow { margin-left: 4px; font-size: 10px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+
+  td {
+    padding: 11px 16px;
+    vertical-align: middle;
+  }
+
+  .td-name {
+    font-weight: 600;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-ext {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--blue);
+    text-transform: uppercase;
+    background: rgba(91,156,246,0.1);
+    border: 1px solid rgba(91,156,246,0.2);
+    border-radius: 4px;
+    padding: 2px 8px;
+    display: inline-block;
+  }
+
+  .td-project {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-path {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-size {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .td-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s;
+    font-family: var(--mono);
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* ---- DATE VIEW ---- */
+  .date-group { margin-bottom: 28px; }
+
+  .date-group-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .date-label {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .date-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg3);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .date-size {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-left: auto;
+  }
+
+  /* ---- TYPE VIEW ---- */
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .type-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .type-card:hover { border-color: var(--blue); }
+  .type-card.active-filter { border-color: var(--blue); background: rgba(91,156,246,0.06); }
+
+  .type-ext {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .type-count {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .type-size {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  /* ---- PAGINATION ---- */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    margin-top: 8px;
+  }
+
+  .page-info {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .page-btns {
+    display: flex;
+    gap: 4px;
+  }
+
+  .page-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .page-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* ---- DETAIL PANEL ---- */
+  .detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .detail-overlay.open { display: flex; }
+
+  .detail-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 28px;
+  }
+
+  .detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    word-break: break-all;
+    flex: 1;
+    margin-right: 12px;
+  }
+
+  .close-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.1s;
+  }
+
+  .close-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .detail-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-key {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding-top: 2px;
+  }
+
+  .detail-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--text);
+  }
+
+  .detail-val.path-val {
+    color: var(--accent);
+    background: rgba(245,166,35,0.05);
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(245,166,35,0.15);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .detail-val.path-val:hover { background: rgba(245,166,35,0.1); }
+
+  /* ---- EMPTY STATE ---- */
+  .empty-state {
+    text-align: center;
+    padding: 64px 32px;
+    color: var(--muted);
+  }
+
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 6px; }
+
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 800px) {
+    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    .controls { padding: 12px 16px; }
+    .content { padding: 20px 16px; }
+    header { padding: 0 16px; }
+  }
+
+  /* ---- RECENT FILES ---- */
+  #recent-files {
+    width: 100%;
+    max-width: 540px;
+    display: none;
+  }
+
+  .recent-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .recent-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+
+  .recent-item:hover { border-color: var(--accent); background: rgba(245,166,35,0.04); }
+  .recent-item-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .recent-icon { font-size: 20px; flex-shrink: 0; }
+
+  .recent-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+  }
+
+  .recent-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .recent-delete {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    width: 26px; height: 26px;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .recent-delete:hover { border-color: var(--red); color: var(--red); }
+
+  /* ---- ANIMATIONS ---- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .project-card, .type-card, tbody tr {
+    animation: fadeUp 0.2s ease both;
+  }
+
+  /* ---- PASSWORD GATE ---- */
+  #gate {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .gate-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+  }
+
+  .gate-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 40px; right: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    border-radius: 2px;
+  }
+
+  .gate-logo {
+    width: 52px; height: 52px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 auto 20px;
+  }
+
+  .gate-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .gate-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 28px;
+  }
+
+  .gate-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 13px 16px;
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .gate-input:focus { border-color: var(--accent); }
+
+  .gate-input.error {
+    border-color: var(--red);
+    animation: shake 0.35s ease;
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+
+  .gate-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 13px;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .gate-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .gate-error {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 12px;
+    min-height: 16px;
+    transition: opacity 0.2s;
+  }
+
+  .gate-footer {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted2);
+    margin-top: 28px;
+    text-align: center;
+  }
+
+  #logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  #logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ---- AUTO-LOAD STATUS ---- */
+  #autoload-status {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 14px;
+    min-height: 18px;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">HDD</div>
+    <div class="gate-title">Asset Dashboard</div>
+    <div class="gate-sub">Enter your team password to continue</div>
+    <input class="gate-input" type="password" id="gate-input"
+           placeholder="Password" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter') checkPassword()">
+    <button class="gate-btn" onclick="checkPassword()">Unlock →</button>
+    <div class="gate-error" id="gate-error"></div>
+  </div>
+  <div class="gate-footer">HDD Asset Dashboard · Team Access Only</div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">HDD</div>
+    <div>
+      <div class="logo-text">Asset Dashboard</div>
+      <div class="logo-sub">Video Data Manager</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="scan-info" id="scan-info" style="display:none">
+      Drive: <span id="info-drive">—</span> &nbsp;|&nbsp;
+      Scanned: <span id="info-date">—</span>
+    </div>
+    <button class="btn-demo" onclick="reloadFile()" id="reload-btn" style="display:none">↑ Load New File</button>
+    <button id="logout-btn" onclick="logout()" style="display:none">🔒 Logout</button>
+  </div>
+</header>
+
+<!-- LOAD ZONE -->
+<div id="load-zone">
+  <div class="drop-area" id="drop-area">
+    <div class="drop-icon">💾</div>
+    <div class="drop-title">Load data.json</div>
+    <div class="drop-sub">Drag & drop your data.json file here<br>or click to browse</div>
+    <button class="btn-load" onclick="document.getElementById('file-input').click()">Browse File</button>
+    <div class="or-demo">— or —</div>
+    <button class="btn-demo" onclick="loadDemo()">Load Demo Data</button>
+    <p style="font-size:11px; color:var(--muted); margin-top:16px; font-family:var(--mono)">
+      Run <strong style="color:var(--accent)">program.bat</strong> first to generate data.json
+    </p>
+  </div>
+  <div id="autoload-status"></div>
+  <input type="file" id="file-input" accept=".json" onchange="handleFileInput(event)">
+  <div id="recent-files"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Total Files</div>
+      <div class="stat-value accent" id="s-total">0</div>
+      <div class="stat-sub" id="s-filtered">shown: 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Size</div>
+      <div class="stat-value" id="s-size">0 GB</div>
+      <div class="stat-sub" id="s-size-sub">across all drives</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Projects</div>
+      <div class="stat-value" id="s-projects">0</div>
+      <div class="stat-sub">top-level folders</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">File Types</div>
+      <div class="stat-value" id="s-types">0</div>
+      <div class="stat-sub">unique extensions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Date Range</div>
+      <div class="stat-value" style="font-size:16px" id="s-range">—</div>
+      <div class="stat-sub" id="s-drive">drive: —</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Drives</div>
+      <div class="stat-value" id="s-drives">0</div>
+      <div class="stat-sub" id="s-drives-list">—</div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" id="search-input" placeholder="Search file name, project, path..." oninput="onSearch()">
+    </div>
+    <select class="filter-select" id="filter-project" onchange="applyFilters()">
+      <option value="">All Projects</option>
+    </select>
+    <select class="filter-select" id="filter-type" onchange="applyFilters()">
+      <option value="">All Types</option>
+    </select>
+    <select class="filter-select" id="filter-date" onchange="applyFilters()">
+      <option value="">All Dates</option>
+    </select>
+    <select class="filter-select" id="filter-drive" onchange="applyFilters()">
+      <option value="">All Drives</option>
+    </select>
+    <select class="filter-select" id="sort-by" onchange="applyFilters()">
+      <option value="date_desc">Newest First</option>
+      <option value="date_asc">Oldest First</option>
+      <option value="name_asc">Name A–Z</option>
+      <option value="size_desc">Largest First</option>
+      <option value="size_asc">Smallest First</option>
+    </select>
+    <div class="view-tabs">
+      <button class="tab-btn active" data-view="table" onclick="switchView('table')">Table</button>
+      <button class="tab-btn" data-view="project" onclick="switchView('project')">Projects</button>
+      <button class="tab-btn" data-view="date" onclick="switchView('date')">By Date</button>
+      <button class="tab-btn" data-view="type" onclick="switchView('type')">By Type</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div id="view-table"></div>
+    <div id="view-project" style="display:none"></div>
+    <div id="view-date" style="display:none"></div>
+    <div id="view-type" style="display:none"></div>
+  </div>
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <div class="detail-title" id="detail-title"></div>
+      <button class="close-btn" onclick="closeDetailPanel()">✕</button>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIG — CHANGE PASSWORD HASH HERE
+//  To generate a new hash: open browser console and run:
+//  sha256('yournewpassword').then(h => console.log(h))
+// ============================================================
+const PASSWORD_HASH = '863b881a79e24372895703ad54cf211b791ca211bbc902dc76a74d510b7b4ee0';
+// ^ Default password is:  admin
+// Replace this hash to change the password.
+// How to generate: https://emn178.github.io/online-tools/sha256.html
+
+// ============================================================
+//  PASSWORD GATE
+// ============================================================
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPassword() {
+  const input = document.getElementById('gate-input').value;
+  const errEl = document.getElementById('gate-error');
+  const inputEl = document.getElementById('gate-input');
+
+  if (!input) { errEl.textContent = 'Please enter a password.'; return; }
+
+  const hash = await sha256(input);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('hdd_auth', hash);
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('logout-btn').style.display = 'block';
+    autoLoadData();
+  } else {
+    errEl.textContent = 'Incorrect password. Try again.';
+    inputEl.classList.add('error');
+    inputEl.value = '';
+    setTimeout(() => { inputEl.classList.remove('error'); errEl.textContent = ''; }, 1500);
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('hdd_auth');
+  location.reload();
+}
+
+// Check if already authenticated this session
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('hdd_auth');
+  if (saved === PASSWORD_HASH) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('logout-btn').style.display = 'block';
+    autoLoadData();
+  }
+  renderRecent();
+});
+
+// ============================================================
+//  AUTO-LOAD combined_data.json (when hosted on GitHub Pages)
+// ============================================================
+async function autoLoadData() {
+  // Only auto-fetch when running on a real server (not local file://)
+  if (location.protocol === 'file:') return;
+
+  const statusEl = document.getElementById('autoload-status');
+  const candidates = ['combined_data.json', 'data.json'];
+
+  for (const filename of candidates) {
+    try {
+      statusEl.textContent = `⏳ Loading ${filename}...`;
+      const res = await fetch(filename);
+      if (!res.ok) continue;
+      const json = await res.json();
+      statusEl.textContent = `✓ Loaded ${filename}`;
+      setTimeout(() => { statusEl.textContent = ''; }, 2000);
+      initDashboard(json);
+      return;
+    } catch(e) { continue; }
+  }
+
+  statusEl.textContent = 'No data file found. Upload combined_data.json to your repo.';
+}
+
+// ============================================================
+//  RECENT FILES
+// ============================================================
+const RECENT_KEY = 'hdd_recent_files';
+const MAX_RECENT = 5;
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveRecent(filename, json) {
+  try {
+    const recent = getRecent().filter(r => r.filename !== filename);
+    const info = json.scan_info || {};
+    recent.unshift({
+      filename,
+      timestamp: new Date().toISOString(),
+      totalFiles: (json.files || []).length,
+      drive: info.drive || '—',
+      scanDate: info.scan_date || '—',
+      data: json
+    });
+    if (recent.length > MAX_RECENT) recent.length = MAX_RECENT;
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  } catch(e) {}
+  renderRecent();
+}
+
+function deleteRecent(idx, e) {
+  e.stopPropagation();
+  const recent = getRecent();
+  recent.splice(idx, 1);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
+  renderRecent();
+}
+
+function renderRecent() {
+  const recent = getRecent();
+  const container = document.getElementById('recent-files');
+  if (!recent.length) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  container.innerHTML = `<div class="recent-title">Recently Loaded</div>` +
+    recent.map((r, i) => `
+      <div class="recent-item" onclick="loadRecent(${i})">
+        <div class="recent-item-left">
+          <div class="recent-icon">📂</div>
+          <div>
+            <div class="recent-name">${r.filename}</div>
+            <div class="recent-meta">${(r.totalFiles||0).toLocaleString()} files &nbsp;·&nbsp; Drive: ${r.drive} &nbsp;·&nbsp; ${new Date(r.timestamp).toLocaleString()}</div>
+          </div>
+        </div>
+        <button class="recent-delete" title="Remove" onclick="deleteRecent(${i}, event)">✕</button>
+      </div>`).join('');
+}
+
+function loadRecent(idx) {
+  const recent = getRecent();
+  if (recent[idx]) initDashboard(recent[idx].data);
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+let allData = [];
+let filtered = [];
+let currentView = 'table';
+let currentPage = 1;
+const PAGE_SIZE = 100;
+let sortField = 'date_desc';
+let sortDir = 1;
+
+// ============================================================
+//  FILE LOADING
+// ============================================================
+const dropArea = document.getElementById('drop-area');
+
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('dragover'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+});
+
+function handleFileInput(event) {
+  const file = event.target.files[0];
+  if (file) readFile(file);
+}
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const json = JSON.parse(e.target.result);
+      saveRecent(file.name, json);
+      initDashboard(json);
+    } catch(err) {
+      alert('Invalid JSON file. Please make sure you run program.bat first.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function reloadFile() {
+  document.getElementById('file-input').click();
+}
+
+// ============================================================
+//  DEMO DATA
+// ============================================================
+function loadDemo() {
+  const projects = ['ProjectAlpha_TVC', 'Documentary_2024', 'BrandFilm_Nike', 'EventCoverage_Jakarta', 'MusicVideo_Raisa', 'CommercialShoot_BCA', 'WebSeries_S01'];
+  const types = ['mp4','mov','mxf','r3d','braw','jpg','wav','prproj'];
+  const files = [];
+  let id = 1;
+
+  projects.forEach(proj => {
+    const count = Math.floor(Math.random() * 80) + 20;
+    for(let i = 0; i < count; i++) {
+      const ext = types[Math.floor(Math.random() * types.length)];
+      const day = Math.floor(Math.random() * 365);
+      const d = new Date(2024, 0, 1);
+      d.setDate(d.getDate() + day);
+      const dateStr = d.toISOString().slice(0,10);
+      const sizeMb = ext === 'r3d' || ext === 'braw' ? (Math.random()*8000+500).toFixed(2) :
+                     ext === 'mxf' || ext === 'mov' ? (Math.random()*2000+100).toFixed(2) :
+                     ext === 'mp4' ? (Math.random()*500+50).toFixed(2) :
+                     ext === 'jpg' ? (Math.random()*10+1).toFixed(2) :
+                     (Math.random()*100+10).toFixed(2);
+      const clip = `${proj}_${String(i+1).padStart(3,'0')}.${ext}`;
+      files.push({
+        id, name: clip, extension: ext,
+        size_mb: parseFloat(sizeMb),
+        size_gb: (sizeMb/1024).toFixed(3),
+        path: `E:\\${proj}\\Day${Math.ceil((i+1)/20)}\\${clip}`,
+        relative_path: `${proj}\\Day${Math.ceil((i+1)/20)}\\${clip}`,
+        project: proj,
+        sub_folder: `Day${Math.ceil((i+1)/20)}`,
+        date_modified: dateStr,
+        date_created: dateStr,
+        time_modified: `${String(Math.floor(Math.random()*14)+8).padStart(2,'0')}:${String(Math.floor(Math.random()*60)).padStart(2,'0')}`,
+        drive: 'E:'
+      });
+      id++;
+    }
+  });
+
+  const demoJson = {
+    scan_info: {
+      scan_date: new Date().toISOString().slice(0,16).replace('T',' '),
+      drive: 'E:',
+      total_files: files.length,
+      total_size_gb: (files.reduce((a,b)=>a+parseFloat(b.size_mb),0)/1024).toFixed(2),
+      file_types: types,
+      projects,
+      generated_by: 'Demo Data'
+    },
+    files
+  };
+  initDashboard(demoJson);
+}
+
+// ============================================================
+//  INIT DASHBOARD
+// ============================================================
+function initDashboard(json) {
+  allData = json.files || [];
+  const info = json.scan_info || {};
+
+  document.getElementById('load-zone').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('scan-info').style.display = 'block';
+  document.getElementById('reload-btn').style.display = 'block';
+
+  document.getElementById('info-drive').textContent = info.drive_name || info.drive || '—';
+  document.getElementById('info-date').textContent = info.scan_date || '—';
+
+  // Stats
+  const totalGb = allData.reduce((a,b)=>a+parseFloat(b.size_mb||0),0)/1024;
+  const projects = [...new Set(allData.map(f=>f.project))];
+  const types = [...new Set(allData.map(f=>f.extension))];
+  const dates = allData.map(f=>f.date_modified).sort();
+
+  // Build drive map: letter → display label
+  const driveMap = {};
+  allData.forEach(f => {
+    const letter = (f.drive || '').toUpperCase();
+    if (!letter) return;
+    if (!driveMap[letter]) driveMap[letter] = f.drive_name || letter;
+  });
+  const driveKeys = Object.keys(driveMap).sort();
+
+  document.getElementById('s-total').textContent = allData.length.toLocaleString();
+  document.getElementById('s-size').textContent = totalGb > 1000 ? (totalGb/1000).toFixed(1)+' TB' : totalGb.toFixed(1)+' GB';
+  document.getElementById('s-projects').textContent = projects.length;
+  document.getElementById('s-types').textContent = types.length;
+  document.getElementById('s-drive').textContent = 'label: ' + (info.drive_name || info.drive || '—');
+  document.getElementById('s-drives').textContent = driveKeys.length || '—';
+  document.getElementById('s-drives-list').textContent = driveKeys.map(k => driveMap[k]).join(', ') || '—';
+
+  if(dates.length) {
+    const from = dates[0].slice(0,7);
+    const to = dates[dates.length-1].slice(0,7);
+    document.getElementById('s-range').textContent = from === to ? from : from + ' → ' + to;
+  }
+
+  // Populate filters
+  const projSelect = document.getElementById('filter-project');
+  projSelect.innerHTML = '<option value="">All Projects</option>';
+  projects.sort().forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    projSelect.appendChild(o);
+  });
+
+  const typeSelect = document.getElementById('filter-type');
+  typeSelect.innerHTML = '<option value="">All Types</option>';
+  types.sort().forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t.toUpperCase();
+    typeSelect.appendChild(o);
+  });
+
+  const years = [...new Set(allData.map(f => (f.date_modified||'').slice(0,4)).filter(y => y && /^\d{4}$/.test(y)))].sort((a,b) => b - a);
+  const dateSelect = document.getElementById('filter-date');
+  dateSelect.innerHTML = '<option value="">All Dates</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    dateSelect.appendChild(o);
+  });
+
+  const driveSelect = document.getElementById('filter-drive');
+  driveSelect.innerHTML = '<option value="">All Drives</option>';
+  driveKeys.forEach(letter => {
+    const o = document.createElement('option');
+    o.value = letter; o.textContent = driveMap[letter];
+    driveSelect.appendChild(o);
+  });
+
+  applyFilters();
+}
+
+// ============================================================
+//  FILTERS & SORT
+// ============================================================
+let searchTimeout;
+function onSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(applyFilters, 200);
+}
+
+function applyFilters() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  const proj = document.getElementById('filter-project').value;
+  const type = document.getElementById('filter-type').value;
+  const dateRange = document.getElementById('filter-date').value;
+  const drive = document.getElementById('filter-drive').value;
+  const sort = document.getElementById('sort-by').value;
+
+  filtered = allData.filter(f => {
+    if(q) {
+      const driveName = (f.drive_name || '').toLowerCase();
+      const driveLetter = (f.drive || '').toLowerCase();
+      if(!f.name.toLowerCase().includes(q) && !f.project.toLowerCase().includes(q) &&
+         !(f.path||'').toLowerCase().includes(q) && !(f.sub_folder||'').toLowerCase().includes(q) &&
+         !driveName.includes(q) && !driveLetter.includes(q)) return false;
+    }
+    if(proj && f.project !== proj) return false;
+    if(type && f.extension !== type) return false;
+    if(dateRange && (f.date_modified||'').slice(0,4) !== dateRange) return false;
+    if(drive && (f.drive||'').toUpperCase() !== drive) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b) => {
+    switch(sort) {
+      case 'date_desc': return (b.date_modified||'') > (a.date_modified||'') ? 1 : -1;
+      case 'date_asc':  return (a.date_modified||'') > (b.date_modified||'') ? 1 : -1;
+      case 'name_asc':  return a.name.localeCompare(b.name);
+      case 'size_desc': return parseFloat(b.size_mb||0) - parseFloat(a.size_mb||0);
+      case 'size_asc':  return parseFloat(a.size_mb||0) - parseFloat(b.size_mb||0);
+    }
+    return 0;
+  });
+
+  document.getElementById('s-filtered').textContent = `shown: ${filtered.length.toLocaleString()}`;
+  currentPage = 1;
+  renderCurrentView();
+}
+
+// ============================================================
+//  VIEW SWITCHING
+// ============================================================
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  ['table','project','date','type'].forEach(v => {
+    document.getElementById(`view-${v}`).style.display = v === view ? 'block' : 'none';
+  });
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if(currentView === 'table') renderTable();
+  else if(currentView === 'project') renderProjects();
+  else if(currentView === 'date') renderDate();
+  else if(currentView === 'type') renderType();
+}
+
+// ============================================================
+//  TABLE VIEW
+// ============================================================
+function renderTable() {
+  const container = document.getElementById('view-table');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const page = filtered.slice(start, end);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  if(!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><h3>No files found</h3><p>Try adjusting your filters</p></div>`;
+    return;
+  }
+
+  let html = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>#</th>
+      <th>Drive Label</th>
+      <th onclick="tableSort('project')">Project <span class="sort-arrow">↕</span></th>
+      <th>Sub-folder</th>
+      <th onclick="tableSort('name')">File Name <span class="sort-arrow">↕</span></th>
+      <th onclick="tableSort('extension')">Type <span class="sort-arrow">↕</span></th>
+      <th onclick="tableSort('size_mb')">Size <span class="sort-arrow">↕</span></th>
+      <th onclick="tableSort('date_modified')">Date <span class="sort-arrow">↕</span></th>
+      <th>Path</th>
+      <th>Copy</th>
+    </tr></thead><tbody>`;
+
+  page.forEach((f, i) => {
+    const sz = parseFloat(f.size_mb||0);
+    const szStr = sz > 1024 ? (sz/1024).toFixed(2)+' GB' : sz.toFixed(1)+' MB';
+    html += `<tr onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
+      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${start+i+1}</td>
+      <td style="font-family:var(--mono);font-size:11px;white-space:nowrap" title="${f.drive_name||f.drive||''}">
+        <span style="color:var(--text)">${f.drive_name || f.drive || '—'}</span>
+      </td>
+      <td class="td-project" title="${f.project}">${f.project||'—'}</td>
+      <td class="td-path" title="${f.sub_folder}">${f.sub_folder||'—'}</td>
+      <td class="td-name" title="${f.name}">${f.name}</td>
+      <td><span class="td-ext">${(f.extension||'?').toUpperCase()}</span></td>
+      <td class="td-size">${szStr}</td>
+      <td class="td-date">${f.date_modified||'—'}</td>
+      <td class="td-path" title="${f.path}" style="max-width:200px">${(f.path||'').replace(/\\/g,'\\')}</td>
+      <td onclick="event.stopPropagation()">
+        <button class="copy-btn" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}', this)">Copy</button>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Pagination
+  html += `<div class="pagination">
+    <div class="page-info">Showing ${start+1}–${Math.min(end,filtered.length)} of ${filtered.length.toLocaleString()} files</div>
+    <div class="page-btns">`;
+
+  html += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>‹</button>`;
+
+  const range = pagRange(currentPage, totalPages);
+  range.forEach(p => {
+    if(p === '...') html += `<button class="page-btn" disabled>…</button>`;
+    else html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}>›</button>
+    </div></div>`;
+
+  container.innerHTML = html;
+}
+
+function pagRange(cur, total) {
+  if(total <= 7) return Array.from({length:total},(_,i)=>i+1);
+  const pages = [];
+  pages.push(1);
+  if(cur > 3) pages.push('...');
+  for(let p=Math.max(2,cur-1); p<=Math.min(total-1,cur+1); p++) pages.push(p);
+  if(cur < total-2) pages.push('...');
+  pages.push(total);
+  return pages;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  if(p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+  document.querySelector('.controls').scrollIntoView({behavior:'smooth'});
+}
+
+function tableSort(field) {
+  const sortSel = document.getElementById('sort-by');
+  if(field === 'name') sortSel.value = 'name_asc';
+  else if(field === 'size_mb') sortSel.value = 'size_desc';
+  else if(field === 'date_modified') sortSel.value = 'date_desc';
+  applyFilters();
+}
+
+// ============================================================
+//  PROJECT VIEW
+// ============================================================
+function renderProjects() {
+  const container = document.getElementById('view-project');
+  const grouped = {};
+  filtered.forEach(f => {
+    if(!grouped[f.project]) grouped[f.project] = [];
+    grouped[f.project].push(f);
+  });
+
+  if(!Object.keys(grouped).length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📁</div><h3>No projects found</h3></div>`;
+    return;
+  }
+
+  const sorted = Object.entries(grouped).sort((a,b) => b[1].length - a[1].length);
+  let html = `<div class="project-grid">`;
+
+  sorted.forEach(([proj, files]) => {
+    const totalMb = files.reduce((a,b)=>a+parseFloat(b.size_mb||0),0);
+    const sizeStr = totalMb > 1024 ? (totalMb/1024).toFixed(1)+' GB' : totalMb.toFixed(0)+' MB';
+    const types = [...new Set(files.map(f=>f.extension))].filter(Boolean);
+    const dates = files.map(f=>f.date_modified).sort();
+    const latestDate = dates[dates.length-1];
+    const subFolders = [...new Set(files.map(f=>f.sub_folder).filter(Boolean))];
+
+    html += `<div class="project-card" onclick="filterByProject('${proj.replace(/'/g,"\\'")}')">
+      <div class="pc-header">
+        <div class="pc-name">${proj}</div>
+        <div class="pc-badge">${subFolders.length} folder${subFolders.length!==1?'s':''}</div>
+      </div>
+      <div class="pc-stats">
+        <div class="pc-stat"><div class="v">${files.length}</div><div class="l">Files</div></div>
+        <div class="pc-stat"><div class="v">${sizeStr}</div><div class="l">Size</div></div>
+      </div>
+      <div class="pc-types">${types.slice(0,6).map(t=>`<span class="type-pill">${t}</span>`).join('')}${types.length>6?`<span class="type-pill">+${types.length-6}</span>`:''}</div>
+      <div class="pc-date">Latest: ${latestDate||'—'}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function filterByProject(proj) {
+  document.getElementById('filter-project').value = proj;
+  switchView('table');
+  applyFilters();
+}
+
+// ============================================================
+//  DATE VIEW
+// ============================================================
+function renderDate() {
+  const container = document.getElementById('view-date');
+  const grouped = {};
+  filtered.forEach(f => {
+    const ym = (f.date_modified||'Unknown').slice(0,7);
+    if(!grouped[ym]) grouped[ym] = [];
+    grouped[ym].push(f);
+  });
+
+  if(!Object.keys(grouped).length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📅</div><h3>No files found</h3></div>`;
+    return;
+  }
+
+  const sorted = Object.entries(grouped).sort((a,b)=>b[0].localeCompare(a[0]));
+  let html = '';
+
+  sorted.forEach(([ym, files]) => {
+    const totalMb = files.reduce((a,b)=>a+parseFloat(b.size_mb||0),0);
+    const sizeStr = totalMb > 1024 ? (totalMb/1024).toFixed(1)+' GB' : totalMb.toFixed(0)+' MB';
+    const d = new Date(ym+'-01');
+    const monthLabel = isNaN(d.getTime()) ? ym : d.toLocaleDateString('en-US',{year:'numeric',month:'long'});
+
+    html += `<div class="date-group">
+      <div class="date-group-header">
+        <div class="date-label">${monthLabel}</div>
+        <div class="date-count">${files.length} files</div>
+        <div class="date-size">${sizeStr}</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>File Name</th><th>Type</th><th>Project</th><th>Size</th><th>Date</th><th>Copy</th>
+        </tr></thead><tbody>`;
+
+    files.slice(0,50).forEach(f => {
+      const sz = parseFloat(f.size_mb||0);
+      const szStr = sz > 1024 ? (sz/1024).toFixed(2)+' GB' : sz.toFixed(1)+' MB';
+      html += `<tr onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
+        <td class="td-name">${f.name}</td>
+        <td><span class="td-ext">${(f.extension||'?').toUpperCase()}</span></td>
+        <td class="td-project">${f.project||'—'}</td>
+        <td class="td-size">${szStr}</td>
+        <td class="td-date">${f.date_modified||'—'}</td>
+        <td onclick="event.stopPropagation()"><button class="copy-btn" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}',this)">Copy</button></td>
+      </tr>`;
+    });
+
+    if(files.length > 50) {
+      html += `<tr><td colspan="6" style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;padding:10px">
+        + ${files.length-50} more files. Use search/filter to narrow down.
+      </td></tr>`;
+    }
+
+    html += `</tbody></table></div></div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+//  TYPE VIEW
+// ============================================================
+function renderType() {
+  const container = document.getElementById('view-type');
+  const grouped = {};
+  filtered.forEach(f => {
+    const ext = (f.extension||'unknown').toLowerCase();
+    if(!grouped[ext]) grouped[ext] = [];
+    grouped[ext].push(f);
+  });
+
+  if(!Object.keys(grouped).length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🗂️</div><h3>No files found</h3></div>`;
+    return;
+  }
+
+  const sorted = Object.entries(grouped).sort((a,b)=>b[1].length-a[1].length);
+  let html = `<div class="type-grid">`;
+
+  sorted.forEach(([ext, files]) => {
+    const totalMb = files.reduce((a,b)=>a+parseFloat(b.size_mb||0),0);
+    const sizeStr = totalMb > 1024 ? (totalMb/1024).toFixed(1)+' GB' : totalMb.toFixed(0)+' MB';
+    html += `<div class="type-card" onclick="filterByType('${ext}')">
+      <div class="type-ext">.${ext}</div>
+      <div class="type-count">${files.length.toLocaleString()} files</div>
+      <div class="type-size">${sizeStr}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  // Also show table filtered by active type
+  const activeType = document.getElementById('filter-type').value;
+  if(activeType) {
+    const typeFiles = filtered.filter(f=>f.extension===activeType);
+    html += `<div style="margin-top:8px">
+      <div class="date-group-header" style="margin-bottom:12px">
+        <div class="date-label">.${activeType.toUpperCase()} Files</div>
+        <div class="date-count">${typeFiles.length} files</div>
+      </div>`;
+    html += buildMiniTable(typeFiles.slice(0,100));
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function filterByType(ext) {
+  document.getElementById('filter-type').value = ext;
+  switchView('table');
+  applyFilters();
+}
+
+function buildMiniTable(files) {
+  let html = `<div class="table-wrap"><table>
+    <thead><tr><th>File Name</th><th>Project</th><th>Size</th><th>Date</th><th>Copy</th></tr></thead><tbody>`;
+  files.forEach(f => {
+    const sz = parseFloat(f.size_mb||0);
+    const szStr = sz > 1024 ? (sz/1024).toFixed(2)+' GB' : sz.toFixed(1)+' MB';
+    html += `<tr onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
+      <td class="td-name">${f.name}</td>
+      <td class="td-project">${f.project||'—'}</td>
+      <td class="td-size">${szStr}</td>
+      <td class="td-date">${f.date_modified||'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="copy-btn" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}',this)">Copy</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+// ============================================================
+//  DETAIL PANEL
+// ============================================================
+function showDetail(idx) {
+  const f = allData[idx];
+  if(!f) return;
+  const sz = parseFloat(f.size_mb||0);
+  const szStr = sz > 1024 ? (sz/1024).toFixed(2)+' GB' : sz.toFixed(1)+' MB';
+
+  document.getElementById('detail-title').textContent = f.name;
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-row"><div class="detail-key">Extension</div><div class="detail-val">${(f.extension||'?').toUpperCase()}</div></div>
+    <div class="detail-row"><div class="detail-key">Project</div><div class="detail-val" style="color:var(--accent)">${f.project||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Sub-folder</div><div class="detail-val">${f.sub_folder||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Size</div><div class="detail-val">${szStr} (${parseFloat(f.size_mb).toFixed(2)} MB)</div></div>
+    <div class="detail-row"><div class="detail-key">Date Modified</div><div class="detail-val">${f.date_modified||'—'} ${f.time_modified||''}</div></div>
+    <div class="detail-row"><div class="detail-key">Date Created</div><div class="detail-val">${f.date_created||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Drive Label</div><div class="detail-val">${f.drive_name || f.drive || '—'}</div></div>
+    <div class="detail-row">
+      <div class="detail-key">Full Path</div>
+      <div class="detail-val path-val" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}', this)" title="Click to copy">${f.path||'—'}</div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="copy-btn" style="padding:8px 20px;font-size:12px" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}',this)">📋 Copy Full Path</button>
+    </div>`;
+
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail(e) {
+  if(e.target === document.getElementById('detail-overlay')) closeDetailPanel();
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+// ============================================================
+//  COPY PATH
+// ============================================================
+function copyPath(path, btn) {
+  navigator.clipboard.writeText(path).then(() => {
+    if(btn) {
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    }
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = path;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(btn) {
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    }
+  });
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeDetailPanel();
+  if(e.key === '/' && document.getElementById('dashboard').style.display !== 'none') {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+  }
+});
+</script>
+</body>
+</html>
