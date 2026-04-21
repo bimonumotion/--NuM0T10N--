@@ -766,6 +766,72 @@
     header { padding: 0 16px; }
   }
 
+  /* ---- LOAD LAST ---- */
+  #load-last {
+    width: 100%;
+    max-width: 540px;
+  }
+
+  .load-last-card {
+    background: linear-gradient(135deg, #152018 0%, #1c2e22 100%);
+    border: 2px solid var(--green);
+    border-radius: 14px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .load-last-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(76,175,130,0.18); }
+
+  .load-last-icon { font-size: 30px; flex-shrink: 0; }
+
+  .load-last-info { flex: 1; min-width: 0; }
+
+  .load-last-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+
+  .load-last-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .load-last-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  .load-last-open {
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 7px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .load-last-open:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
   /* ---- RECENT FILES ---- */
   #recent-files {
     width: 100%;
@@ -976,6 +1042,119 @@
 
   #logout-btn:hover { border-color: var(--red); color: var(--red); }
 
+  /* ---- HOME BUTTON ---- */
+  #home-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #home-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- COMBINE ALL BUTTON ---- */
+  .combine-section {
+    width: 100%;
+    max-width: 540px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .combine-divider {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .btn-combine-all {
+    width: 100%;
+    background: linear-gradient(135deg, #1a2a4a 0%, #1f3a5f 100%);
+    border: 2px solid var(--blue);
+    border-radius: 16px;
+    padding: 32px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-combine-all::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(56,139,253,0.08), rgba(56,139,253,0.02));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-combine-all:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(31,111,235,0.2); }
+  .btn-combine-all:hover::before { opacity: 1; }
+
+  .combine-icon { font-size: 40px; line-height: 1; }
+
+  .combine-text {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--blue);
+    letter-spacing: 0.02em;
+  }
+
+  .combine-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ---- COMBINE LOADING OVERLAY ---- */
+  #combine-loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(13,14,16,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .spinner-lg {
+    width: 64px;
+    height: 64px;
+    border: 4px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .combine-loading-label {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    text-align: center;
+    max-width: 360px;
+  }
+
+  .combine-loading-label span { color: var(--blue); }
+
+  .combine-loading-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
   /* ---- AUTO-LOAD STATUS ---- */
   #autoload-status {
     font-family: var(--mono);
@@ -994,6 +1173,23 @@
     gap: 20px;
     padding: 80px 40px;
   }
+
+  #load-manual-btn {
+    opacity: 0;
+    animation: fadeInDelayed 0.4s ease 3s forwards;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #load-manual-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  @keyframes fadeInDelayed { to { opacity: 1; } }
 
   .spinner {
     width: 44px;
@@ -1049,6 +1245,7 @@
       Drive: <span id="info-drive">—</span> &nbsp;|&nbsp;
       Scanned: <span id="info-date">—</span>
     </div>
+    <button id="home-btn" onclick="goHome()" style="display:none">← Home</button>
     <button class="btn-demo" onclick="reloadFile()" id="reload-btn" style="display:none">↑ Load New File</button>
     <button id="logout-btn" onclick="logout()" style="display:none">🔒 Logout</button>
   </div>
@@ -1061,6 +1258,7 @@
   <div id="loading-state">
     <div class="spinner"></div>
     <div class="loading-label" id="loading-label">Looking for data files...</div>
+    <button id="load-manual-btn" onclick="showPicker()">Load Manually</button>
   </div>
 
   <!-- Shown only if auto-load fails -->
@@ -1076,9 +1274,27 @@
     </p>
   </div>
 
+  <!-- Combine All section — shown when history has multiple entries -->
+  <div class="combine-section" id="combine-section" style="display:none">
+    <div class="combine-divider">— or —</div>
+    <button class="btn-combine-all" onclick="combineAllAndLoad()">
+      <div class="combine-icon">🗄️</div>
+      <div class="combine-text">Combine All JSON</div>
+      <div class="combine-sub">Merge all datasets from history into one view</div>
+    </button>
+  </div>
+
   <div id="autoload-status"></div>
   <input type="file" id="file-input" accept=".json" multiple onchange="handleFileInput(event)">
+  <div id="load-last" style="display:none"></div>
   <div id="recent-files"></div>
+</div>
+
+<!-- COMBINE LOADING OVERLAY -->
+<div id="combine-loading" style="display:none">
+  <div class="spinner-lg"></div>
+  <div class="combine-loading-label">Combining <span id="combine-loading-count">all datasets</span>...</div>
+  <div class="combine-loading-sub">Please wait, merging and deduplicating files</div>
 </div>
 
 <!-- DASHBOARD -->
@@ -1228,14 +1444,14 @@ function logout() {
 }
 
 // Check if already authenticated this session
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const saved = sessionStorage.getItem('hdd_auth');
   if (saved === PASSWORD_HASH) {
     document.getElementById('gate').style.display = 'none';
     document.getElementById('logout-btn').style.display = 'block';
     autoLoadData();
   }
-  renderRecent();
+  await renderRecent();
 });
 
 // ============================================================
@@ -1251,157 +1467,312 @@ async function fetchAndParse(url) {
   return JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text);
 }
 
+function showPicker() {
+  const loadingEl = document.getElementById('loading-state');
+  const dropEl    = document.getElementById('drop-area');
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (dropEl)    dropEl.style.display    = 'block';
+}
+
 async function autoLoadData() {
   const labelEl   = document.getElementById('loading-label');
   const loadingEl = document.getElementById('loading-state');
   const dropEl    = document.getElementById('drop-area');
 
   function setLabel(html) { if (labelEl) labelEl.innerHTML = html; }
-  function showPicker() {
-    if (loadingEl) loadingEl.style.display = 'none';
-    if (dropEl)    dropEl.style.display    = 'block';
-  }
 
   if (loadingEl) loadingEl.style.display = 'flex';
   if (dropEl)    dropEl.style.display    = 'none';
 
-  // ── GitHub Pages: auto-discover every JSON via the GitHub Contents API ──────
-  if (location.hostname.endsWith('.github.io')) {
-    const owner     = location.hostname.split('.')[0];
-    // Strip filename segments (contain a dot) to get the repo sub-path
-    const pathParts = location.pathname.split('/').filter(p => p && !/\.\w+$/.test(p));
-    const repo      = pathParts[0] || `${owner}.github.io`;
-    const subPath   = pathParts.slice(1).join('/');
-    const apiDir    = subPath ? `/${subPath}` : '';
+  // ── 1. Probe combined_data_part0.json, part1, part2… until 404 ───────────────
+  //       Works on GitHub Pages and any HTTP server with no API needed.
+  if (location.protocol !== 'file:') {
+    setLabel('Looking for <span>combined_data_part*.json</span>...');
+    const jsons = [];
+    for (let i = 0; i <= 999; i++) {
+      const name = `combined_data_part${i}.json`;
+      try {
+        const r = await fetch(name);
+        if (!r.ok) break;           // first 404 → no more parts
+        setLabel(`Loading <span>${name}</span>...`);
+        const text = await r.text();
+        jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
+      } catch(e) { break; }
+    }
+    if (jsons.length) {
+      setLabel(`Merging <span>${jsons.length} file(s)</span>...`);
+      const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+      saveRecent(`Auto: ${jsons.length} part(s) — ${new Date().toLocaleDateString()}`, merged);
+      initDashboard(merged);
+      return;
+    }
+  }
 
-    setLabel(`Scanning <span>${owner}/${repo}</span> for data files...`);
+  // ── 2. filelist.json manifest ──────────────────────────────────────────────
+  if (location.protocol !== 'file:') {
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents${apiDir}`,
-        { headers: { Accept: 'application/vnd.github+json' } }
-      );
-      if (res.ok) {
-        const items    = await res.json();
-        const jsonFiles = Array.isArray(items)
-          ? items
-              .filter(f => f.type === 'file' && f.name.endsWith('.json') && !SKIP_JSON.has(f.name))
-              .sort((a, b) => a.name.localeCompare(b.name))
-          : [];
-
-        if (jsonFiles.length) {
-          setLabel(`Found <span>${jsonFiles.length} file(s)</span> — loading...`);
-          const jsons = [];
-          for (const file of jsonFiles) {
-            try {
-              setLabel(`Loading <span>${file.name}</span>…`);
-              const data = await fetchAndParse(file.download_url);
-              if (data) jsons.push(data);
-            } catch(e) {}
-          }
-          if (jsons.length) {
-            initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
-            return;
-          }
-        } else {
-          setLabel('No JSON files found in repo.');
+      setLabel('Looking for <span>filelist.json</span>...');
+      const list = await fetchAndParse('filelist.json');
+      if (Array.isArray(list) && list.length) {
+        const jsons = [];
+        for (const filename of list) {
+          try {
+            setLabel(`Loading <span>${filename}</span>...`);
+            const data = await fetchAndParse(filename);
+            if (data) jsons.push(data);
+          } catch(e) {}
+        }
+        if (jsons.length) {
+          const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+          saveRecent(`filelist.json — ${new Date().toLocaleDateString()}`, merged);
+          initDashboard(merged);
+          return;
         }
       }
     } catch(e) {}
   }
 
-  // ── filelist.json manifest (server-hosted, non-GitHub) ─────────────────────
-  try {
-    setLabel('Looking for <span>filelist.json</span>...');
-    const list = await fetchAndParse('filelist.json');
-    if (Array.isArray(list) && list.length) {
-      setLabel(`Loading <span>${list.length} file(s)</span> from filelist.json...`);
-      const jsons = [];
-      for (const filename of list) {
-        try {
-          setLabel(`Loading <span>${filename}</span>...`);
-          const data = await fetchAndParse(filename);
-          if (data) jsons.push(data);
-        } catch(e) {}
-      }
-      if (jsons.length) {
-        initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
-        return;
-      }
-    }
-  } catch(e) {}
-
-  // ── Last resort: try well-known single filenames ────────────────────────────
-  for (const filename of ['combined_data.json', 'data.json']) {
+  // ── 3. GitHub Pages: recursive Git Trees API (finds any-named JSON files) ──
+  if (location.hostname.endsWith('.github.io')) {
+    const owner     = location.hostname.split('.')[0];
+    const pathParts = location.pathname.split('/').filter(p => p && !/\.\w+$/.test(p));
+    const repo      = pathParts[0] || `${owner}.github.io`;
+    const GH        = { headers: { Accept: 'application/vnd.github+json' } };
     try {
-      setLabel(`Loading <span>${filename}</span>...`);
-      const data = await fetchAndParse(filename);
-      if (data) { initDashboard(data); return; }
+      setLabel(`Scanning <span>${owner}/${repo}</span> via GitHub API...`);
+      const repoData = await (await fetch(`https://api.github.com/repos/${owner}/${repo}`, GH)).json();
+      const branch   = repoData.default_branch || 'main';
+      const treeData = await (await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, GH
+      )).json();
+      const jsonFiles = (treeData.tree || [])
+        .filter(f => f.type === 'blob' && f.path.endsWith('.json') && !SKIP_JSON.has(f.path.split('/').pop()))
+        .sort((a, b) => a.path.localeCompare(b.path));
+      if (jsonFiles.length) {
+        const raw   = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/`;
+        const jsons = [];
+        for (const file of jsonFiles) {
+          try {
+            setLabel(`Loading <span>${file.path.split('/').pop()}</span>...`);
+            const data = await fetchAndParse(raw + file.path);
+            if (data) jsons.push(data);
+          } catch(e) {}
+        }
+        if (jsons.length) {
+          const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+          saveRecent(`${owner}/${repo} — ${new Date().toLocaleDateString()}`, merged);
+          initDashboard(merged);
+          return;
+        }
+      }
     } catch(e) {}
   }
 
-  // Nothing worked — show the manual file picker
+  // ── 4. Single well-known filename fallback ─────────────────────────────────
+  if (location.protocol !== 'file:') {
+    for (const filename of ['combined_data.json', 'data.json']) {
+      try {
+        setLabel(`Trying <span>${filename}</span>...`);
+        const data = await fetchAndParse(filename);
+        if (data) {
+          saveRecent(`${filename} — ${new Date().toLocaleDateString()}`, data);
+          initDashboard(data);
+          return;
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Nothing found → show manual file picker
   showPicker();
 }
 
 // ============================================================
-//  RECENT FILES
+//  HISTORY  — IndexedDB (handles large files localStorage can't)
 // ============================================================
-const RECENT_KEY = 'hdd_recent_files';
-const MAX_RECENT = 5;
+const IDB_NAME  = 'hdd_asset_db';
+const IDB_STORE = 'datasets';
 
-function getRecent() {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
-  catch(e) { return []; }
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE))
+        db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = () => reject(req.error);
+  });
 }
 
-function saveRecent(filename, json) {
+async function idbSave(label, json) {
   try {
-    const recent = getRecent().filter(r => r.filename !== filename);
+    const db   = await idbOpen();
     const info = json.scan_info || {};
-    recent.unshift({
-      filename,
-      timestamp: new Date().toISOString(),
-      totalFiles: (json.files || []).length,
-      drive: info.drive || '—',
-      scanDate: info.scan_date || '—'
-      // data not stored — files are too large for localStorage
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put({
+        id:         label,                              // label is the key — overwrites same name
+        label,
+        timestamp:  new Date().toISOString(),
+        totalFiles: (json.files || []).length,
+        drive:      info.drive || '—',
+        sizeGb:     info.total_size_gb || '—',
+        dupes:      (json.files || []).filter(f => f.is_duplicate).length,
+        data:       json
+      });
+      tx.oncomplete = res;
+      tx.onerror    = () => rej(tx.error);
     });
-    if (recent.length > MAX_RECENT) recent.length = MAX_RECENT;
-    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  } catch(e) { console.warn('History save failed:', e); }
+  renderRecent();
+}
+
+async function idbLoad(id) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
+    });
+  } catch(e) { return null; }
+}
+
+async function idbAll() {
+  try {
+    const db = await idbOpen();
+    return await new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = () => rej(req.error);
+    });
+  } catch(e) { return []; }
+}
+
+async function idbDelete(id) {
+  try {
+    const db = await idbOpen();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(id);
+      tx.oncomplete = res;
+      tx.onerror    = () => rej(tx.error);
+    });
   } catch(e) {}
   renderRecent();
 }
 
-function deleteRecent(idx, e) {
-  e.stopPropagation();
-  const recent = getRecent();
-  recent.splice(idx, 1);
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
-  renderRecent();
-}
+// Public API used elsewhere
+async function saveRecent(label, json) { await idbSave(label, json); }
 
-function renderRecent() {
-  const recent = getRecent();
-  const container = document.getElementById('recent-files');
-  if (!recent.length) { container.style.display = 'none'; return; }
-  container.style.display = 'block';
-  container.innerHTML = `<div class="recent-title">Recently Loaded</div>` +
-    recent.map((r, i) => `
-      <div class="recent-item" onclick="loadRecent(${i})">
-        <div class="recent-item-left">
-          <div class="recent-icon">📂</div>
-          <div>
-            <div class="recent-name">${r.filename}</div>
-            <div class="recent-meta">${(r.totalFiles||0).toLocaleString()} files &nbsp;·&nbsp; Drive: ${r.drive} &nbsp;·&nbsp; ${new Date(r.timestamp).toLocaleString()}</div>
+async function renderRecent() {
+  const container     = document.getElementById('recent-files');
+  const combineSection = document.getElementById('combine-section');
+  const loadLastEl    = document.getElementById('load-last');
+  const all = await idbAll();
+
+  if (!all.length) {
+    container.style.display = 'none';
+    if (combineSection) combineSection.style.display = 'none';
+    if (loadLastEl) loadLastEl.style.display = 'none';
+    return;
+  }
+
+  all.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  if (combineSection) combineSection.style.display = all.length > 1 ? 'flex' : 'none';
+
+  const safeId = id => id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+  // ── Load Last card (most recent entry) ──
+  if (loadLastEl) {
+    const last = all[0];
+    loadLastEl.style.display = 'block';
+    loadLastEl.innerHTML = `
+      <div class="load-last-card" onclick="openHistory('${safeId(last.id)}')">
+        <div class="load-last-icon">⚡</div>
+        <div class="load-last-info">
+          <div class="load-last-tag">Last opened</div>
+          <div class="load-last-name">${last.label}</div>
+          <div class="load-last-meta">
+            ${(last.totalFiles||0).toLocaleString()} files
+            &nbsp;·&nbsp; ${last.sizeGb} GB
+            ${last.dupes ? `&nbsp;·&nbsp; <span style="color:var(--red)">${last.dupes} dupes</span>` : ''}
+            &nbsp;·&nbsp; ${new Date(last.timestamp).toLocaleDateString()}
           </div>
         </div>
-        <button class="recent-delete" title="Remove" onclick="deleteRecent(${i}, event)">✕</button>
+        <button class="load-last-open"
+          onclick="event.stopPropagation();openHistory('${safeId(last.id)}')">Open →</button>
+      </div>`;
+  }
+
+  // ── Full history list (all entries) ──
+  container.style.display = 'block';
+  container.innerHTML =
+    `<div class="recent-title">History — click to reopen</div>` +
+    all.map(r => `
+      <div class="recent-item">
+        <div class="recent-item-left" onclick="openHistory('${safeId(r.id)}')" style="flex:1;cursor:pointer">
+          <div class="recent-icon">📂</div>
+          <div style="min-width:0">
+            <div class="recent-name">${r.label}</div>
+            <div class="recent-meta">
+              ${(r.totalFiles||0).toLocaleString()} files
+              &nbsp;·&nbsp; ${r.sizeGb} GB
+              ${r.dupes ? `&nbsp;·&nbsp; <span style="color:var(--red)">${r.dupes} dupes</span>` : ''}
+              &nbsp;·&nbsp; ${new Date(r.timestamp).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+        <button class="recent-delete" title="Remove from history" onclick="idbDelete('${safeId(r.id)}')">✕</button>
       </div>`).join('');
 }
 
-function loadRecent(idx) {
-  // Recent entries no longer cache data — prompt user to reload the file
-  alert('Recent history is for reference only.\nDrag & drop your JSON file(s) again to load them.');
+async function openHistory(id) {
+  const entry = await idbLoad(id);
+  if (entry?.data) { initDashboard(entry.data); }
+  else alert('Could not load — please drag & drop the file again.');
+}
+
+async function openAllHistory() {
+  const all = await idbAll();
+  const jsons = all.map(r => r.data).filter(Boolean);
+  if (!jsons.length) return;
+  initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
+}
+
+async function combineAllAndLoad() {
+  const overlay = document.getElementById('combine-loading');
+  const countEl = document.getElementById('combine-loading-count');
+  const all = await idbAll();
+  const jsons = all.map(r => r.data).filter(Boolean);
+  if (!jsons.length) return;
+
+  if (countEl) countEl.textContent = `${jsons.length} dataset${jsons.length > 1 ? 's' : ''}`;
+  if (overlay) overlay.style.display = 'flex';
+
+  // Yield to browser to render the overlay before heavy work
+  await new Promise(r => setTimeout(r, 50));
+
+  const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+
+  if (overlay) overlay.style.display = 'none';
+  initDashboard(merged);
+}
+
+function goHome() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('load-zone').style.display = 'flex';
+  document.getElementById('scan-info').style.display = 'none';
+  document.getElementById('reload-btn').style.display = 'none';
+  document.getElementById('home-btn').style.display = 'none';
+  // reset loading state so history shows up properly
+  const loadingEl = document.getElementById('loading-state');
+  const dropEl    = document.getElementById('drop-area');
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (dropEl)    dropEl.style.display    = 'none';
+  renderRecent();
 }
 
 // ============================================================
@@ -1463,7 +1834,15 @@ async function readFiles(fileList) {
   }
   if (!jsons.length) return;
 
-  const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+  let merged;
+  try {
+    merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+  } catch(e) {
+    alert(`Merge failed: ${e.message}\n\nCheck the browser console for details.`);
+    console.error('mergeJsons error:', e);
+    return;
+  }
+
   const label  = files.length === 1 ? files[0].name : `${files.length} files merged`;
   saveRecent(label, merged);
   initDashboard(merged);
@@ -1475,7 +1854,8 @@ function mergeJsons(jsons) {
   let totalSizeGb = 0;
 
   for (const json of jsons) {
-    allFiles.push(...(json.files || []));
+    const arr = json.files || [];
+    for (let i = 0; i < arr.length; i++) allFiles.push(arr[i]);   // avoid spread — large arrays exceed call stack
     const info   = json.scan_info || {};
     const drives = info.drives || (info.drive ? [info.drive] : []);
     drives.forEach(d => allDrives.add(d));
@@ -1578,6 +1958,7 @@ function initDashboard(json) {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('scan-info').style.display = 'block';
   document.getElementById('reload-btn').style.display = 'block';
+  document.getElementById('home-btn').style.display = 'block';
 
   document.getElementById('info-drive').textContent = info.drive_name || info.drive || '—';
   document.getElementById('info-date').textContent = info.scan_date || '—';
