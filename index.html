@@ -102,7 +102,13 @@
     align-items: center;
     justify-content: center;
     min-height: calc(100vh - 64px);
-    gap: 24px;
+    gap: 16px;
+    padding: 40px 16px;
+  }
+
+  #load-zone > * {
+    width: 100%;
+    max-width: 540px;
   }
 
   .drop-area {
@@ -832,71 +838,6 @@
 
   .load-last-open:hover { filter: brightness(1.12); transform: translateY(-1px); }
 
-  /* ---- RECENT FILES ---- */
-  #recent-files {
-    width: 100%;
-    max-width: 540px;
-    display: none;
-  }
-
-  .recent-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-
-  .recent-item {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 8px;
-  }
-
-  .recent-item:hover { border-color: var(--accent); background: rgba(245,166,35,0.04); }
-  .recent-item-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .recent-icon { font-size: 20px; flex-shrink: 0; }
-
-  .recent-name {
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 280px;
-  }
-
-  .recent-meta {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  .recent-delete {
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--muted);
-    width: 26px; height: 26px;
-    border-radius: 5px;
-    font-size: 13px;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.1s;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  .recent-delete:hover { border-color: var(--red); color: var(--red); }
-
   /* ---- ANIMATIONS ---- */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -1246,7 +1187,6 @@
       Scanned: <span id="info-date">—</span>
     </div>
     <button id="home-btn" onclick="goHome()" style="display:none">← Home</button>
-    <button class="btn-demo" onclick="reloadFile()" id="reload-btn" style="display:none">↑ Load New File</button>
     <button id="logout-btn" onclick="logout()" style="display:none">🔒 Logout</button>
   </div>
 </header>
@@ -1287,7 +1227,6 @@
   <div id="autoload-status"></div>
   <input type="file" id="file-input" accept=".json" multiple onchange="handleFileInput(event)">
   <div id="load-last" style="display:none"></div>
-  <div id="recent-files"></div>
 </div>
 
 <!-- COMBINE LOADING OVERLAY -->
@@ -1668,13 +1607,11 @@ async function idbDelete(id) {
 async function saveRecent(label, json) { await idbSave(label, json); }
 
 async function renderRecent() {
-  const container     = document.getElementById('recent-files');
   const combineSection = document.getElementById('combine-section');
-  const loadLastEl    = document.getElementById('load-last');
+  const loadLastEl     = document.getElementById('load-last');
   const all = await idbAll();
 
   if (!all.length) {
-    container.style.display = 'none';
     if (combineSection) combineSection.style.display = 'none';
     if (loadLastEl) loadLastEl.style.display = 'none';
     return;
@@ -1685,48 +1622,27 @@ async function renderRecent() {
 
   const safeId = id => id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
-  // ── Load Last card (most recent entry) ──
   if (loadLastEl) {
     const last = all[0];
     loadLastEl.style.display = 'block';
+    const lastDate = new Date(last.timestamp).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
     loadLastEl.innerHTML = `
       <div class="load-last-card" onclick="openHistory('${safeId(last.id)}')">
         <div class="load-last-icon">⚡</div>
         <div class="load-last-info">
           <div class="load-last-tag">Last opened</div>
-          <div class="load-last-name">${last.label}</div>
+          <div class="load-last-name">HardDisk Data List</div>
           <div class="load-last-meta">
             ${(last.totalFiles||0).toLocaleString()} files
             &nbsp;·&nbsp; ${last.sizeGb} GB
             ${last.dupes ? `&nbsp;·&nbsp; <span style="color:var(--red)">${last.dupes} dupes</span>` : ''}
-            &nbsp;·&nbsp; ${new Date(last.timestamp).toLocaleDateString()}
+            &nbsp;·&nbsp; Last changed: <span style="color:var(--text)">${lastDate}</span>
           </div>
         </div>
         <button class="load-last-open"
           onclick="event.stopPropagation();openHistory('${safeId(last.id)}')">Open →</button>
       </div>`;
   }
-
-  // ── Full history list (all entries) ──
-  container.style.display = 'block';
-  container.innerHTML =
-    `<div class="recent-title">History — click to reopen</div>` +
-    all.map(r => `
-      <div class="recent-item">
-        <div class="recent-item-left" onclick="openHistory('${safeId(r.id)}')" style="flex:1;cursor:pointer">
-          <div class="recent-icon">📂</div>
-          <div style="min-width:0">
-            <div class="recent-name">${r.label}</div>
-            <div class="recent-meta">
-              ${(r.totalFiles||0).toLocaleString()} files
-              &nbsp;·&nbsp; ${r.sizeGb} GB
-              ${r.dupes ? `&nbsp;·&nbsp; <span style="color:var(--red)">${r.dupes} dupes</span>` : ''}
-              &nbsp;·&nbsp; ${new Date(r.timestamp).toLocaleDateString()}
-            </div>
-          </div>
-        </div>
-        <button class="recent-delete" title="Remove from history" onclick="idbDelete('${safeId(r.id)}')">✕</button>
-      </div>`).join('');
 }
 
 async function openHistory(id) {
@@ -1765,7 +1681,6 @@ function goHome() {
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('load-zone').style.display = 'flex';
   document.getElementById('scan-info').style.display = 'none';
-  document.getElementById('reload-btn').style.display = 'none';
   document.getElementById('home-btn').style.display = 'none';
   // reset loading state so history shows up properly
   const loadingEl = document.getElementById('loading-state');
@@ -1957,7 +1872,6 @@ function initDashboard(json) {
   document.getElementById('load-zone').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('scan-info').style.display = 'block';
-  document.getElementById('reload-btn').style.display = 'block';
   document.getElementById('home-btn').style.display = 'block';
 
   document.getElementById('info-drive').textContent = info.drive_name || info.drive || '—';
