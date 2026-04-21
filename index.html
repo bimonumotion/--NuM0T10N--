@@ -1781,7 +1781,12 @@ function mergeJsons(jsons) {
   const seen     = new Set();
   let   dupCount = 0;
   allFiles.forEach(f => {
-    const key = `${f.path}|${f.name}`;
+    // Strip drive letter so E:\Proj\clip.mp4 and F:\Proj\clip.mp4 match as duplicates
+    const relPath = (f.relative_path || f.path || '')
+      .replace(/^[A-Za-z]:[\\\/]?/, '')
+      .replace(/\\/g, '/')
+      .toLowerCase();
+    const key = `${relPath}|${(f.name || '').toLowerCase()}`;
     f.is_duplicate = seen.has(key);
     if (f.is_duplicate) dupCount++;
     else seen.add(key);
@@ -1874,7 +1879,6 @@ function initDashboard(json) {
   document.getElementById('scan-info').style.display = 'block';
   document.getElementById('home-btn').style.display = 'block';
 
-  document.getElementById('info-drive').textContent = info.drive_name || info.drive || '—';
   document.getElementById('info-date').textContent = info.scan_date || '—';
 
   // Stats
@@ -1883,14 +1887,17 @@ function initDashboard(json) {
   const types = [...new Set(allData.map(f=>f.extension))];
   const dates = allData.map(f=>f.date_modified).sort();
 
-  // Build drive map: letter → display label
-  const driveMap = {};
-  allData.forEach(f => {
-    const letter = (f.drive || '').toUpperCase();
-    if (!letter) return;
-    if (!driveMap[letter]) driveMap[letter] = f.drive_name || letter;
-  });
-  const driveKeys = Object.keys(driveMap).sort();
+  // Build drive labels from drive_name / hdd_label (human labels set by merge.ps1)
+  // Never use raw f.drive — it can be a computer name or arbitrary ID
+  const driveLabels = [...new Set(
+    allData.map(f => f.drive_name || f.hdd_label || '').filter(Boolean)
+  )].sort();
+
+  // If no drive_name is set at all, fall back to scan_info.drives list
+  const infoLabels = Array.isArray(info.drives) ? info.drives.filter(Boolean) : [];
+  const displayLabels = driveLabels.length ? driveLabels : infoLabels;
+
+  document.getElementById('info-drive').textContent = displayLabels.join(', ') || info.drive || '—';
 
   const dupeCount = allData.filter(f => f.is_duplicate).length;
 
@@ -1898,9 +1905,9 @@ function initDashboard(json) {
   document.getElementById('s-size').textContent = totalGb > 1000 ? (totalGb/1000).toFixed(1)+' TB' : totalGb.toFixed(1)+' GB';
   document.getElementById('s-projects').textContent = projects.length;
   document.getElementById('s-types').textContent = types.length;
-  document.getElementById('s-drive').textContent = 'label: ' + (info.drive_name || info.drive || '—');
-  document.getElementById('s-drives').textContent = driveKeys.length || '—';
-  document.getElementById('s-drives-list').textContent = driveKeys.map(k => driveMap[k]).join(', ') || '—';
+  document.getElementById('s-drive').textContent = displayLabels.join(', ') || '—';
+  document.getElementById('s-drives').textContent = displayLabels.length || '—';
+  document.getElementById('s-drives-list').textContent = displayLabels.join(', ') || '—';
   document.getElementById('s-dupes').textContent = dupeCount.toLocaleString();
   document.getElementById('s-dupes-sub').textContent = dupeCount ? `of ${allData.length.toLocaleString()} total` : 'no duplicates';
 
@@ -1938,9 +1945,9 @@ function initDashboard(json) {
 
   const driveSelect = document.getElementById('filter-drive');
   driveSelect.innerHTML = '<option value="">All Drives</option>';
-  driveKeys.forEach(letter => {
+  displayLabels.forEach(label => {
     const o = document.createElement('option');
-    o.value = letter; o.textContent = driveMap[letter];
+    o.value = label; o.textContent = label;
     driveSelect.appendChild(o);
   });
 
@@ -1976,7 +1983,7 @@ function applyFilters() {
     if(proj && f.project !== proj) return false;
     if(type && f.extension !== type) return false;
     if(dateRange && (f.date_modified||'').slice(0,4) !== dateRange) return false;
-    if(drive && (f.drive||'').toUpperCase() !== drive) return false;
+    if(drive && (f.drive_name || f.hdd_label || '') !== drive) return false;
     if(dupeFilter === 'dupe'   && !f.is_duplicate) return false;
     if(dupeFilter === 'unique' &&  f.is_duplicate) return false;
     return true;
