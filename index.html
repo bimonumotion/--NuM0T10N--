@@ -1239,63 +1239,107 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-//  AUTO-LOAD combined_data.json (when hosted on GitHub Pages)
+//  AUTO-LOAD  — GitHub Pages: discovers all JSON files via API
+//              Local file://: falls back to file picker
 // ============================================================
+const SKIP_JSON = new Set(['filelist.json','package.json','package-lock.json','manifest.json']);
+
+async function fetchAndParse(url) {
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const text = await r.text();
+  return JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text);
+}
+
 async function autoLoadData() {
   const labelEl   = document.getElementById('loading-label');
   const loadingEl = document.getElementById('loading-state');
   const dropEl    = document.getElementById('drop-area');
 
-  function setLabel(text) { if (labelEl) labelEl.innerHTML = text; }
-
+  function setLabel(html) { if (labelEl) labelEl.innerHTML = html; }
   function showPicker() {
     if (loadingEl) loadingEl.style.display = 'none';
     if (dropEl)    dropEl.style.display    = 'block';
   }
 
-  // Show spinner (already visible by default after login)
   if (loadingEl) loadingEl.style.display = 'flex';
   if (dropEl)    dropEl.style.display    = 'none';
 
-  // --- Try filelist.json first ---
+  // ── GitHub Pages: auto-discover every JSON via the GitHub Contents API ──────
+  if (location.hostname.endsWith('.github.io')) {
+    const owner     = location.hostname.split('.')[0];
+    // Strip filename segments (contain a dot) to get the repo sub-path
+    const pathParts = location.pathname.split('/').filter(p => p && !/\.\w+$/.test(p));
+    const repo      = pathParts[0] || `${owner}.github.io`;
+    const subPath   = pathParts.slice(1).join('/');
+    const apiDir    = subPath ? `/${subPath}` : '';
+
+    setLabel(`Scanning <span>${owner}/${repo}</span> for data files...`);
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents${apiDir}`,
+        { headers: { Accept: 'application/vnd.github+json' } }
+      );
+      if (res.ok) {
+        const items    = await res.json();
+        const jsonFiles = Array.isArray(items)
+          ? items
+              .filter(f => f.type === 'file' && f.name.endsWith('.json') && !SKIP_JSON.has(f.name))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          : [];
+
+        if (jsonFiles.length) {
+          setLabel(`Found <span>${jsonFiles.length} file(s)</span> — loading...`);
+          const jsons = [];
+          for (const file of jsonFiles) {
+            try {
+              setLabel(`Loading <span>${file.name}</span>…`);
+              const data = await fetchAndParse(file.download_url);
+              if (data) jsons.push(data);
+            } catch(e) {}
+          }
+          if (jsons.length) {
+            initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
+            return;
+          }
+        } else {
+          setLabel('No JSON files found in repo.');
+        }
+      }
+    } catch(e) {}
+  }
+
+  // ── filelist.json manifest (server-hosted, non-GitHub) ─────────────────────
   try {
     setLabel('Looking for <span>filelist.json</span>...');
-    const res = await fetch('filelist.json');
-    if (res.ok) {
-      const list = await res.json();
-      if (Array.isArray(list) && list.length) {
-        setLabel(`Loading <span>${list.length} file(s)</span>...`);
-        const jsons = [];
-        for (const filename of list) {
-          try {
-            setLabel(`Loading <span>${filename}</span>...`);
-            const r = await fetch(filename);
-            if (!r.ok) continue;
-            const text = await r.text();
-            jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
-          } catch(e) {}
-        }
-        if (jsons.length) {
-          initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
-          return;
-        }
+    const list = await fetchAndParse('filelist.json');
+    if (Array.isArray(list) && list.length) {
+      setLabel(`Loading <span>${list.length} file(s)</span> from filelist.json...`);
+      const jsons = [];
+      for (const filename of list) {
+        try {
+          setLabel(`Loading <span>${filename}</span>...`);
+          const data = await fetchAndParse(filename);
+          if (data) jsons.push(data);
+        } catch(e) {}
+      }
+      if (jsons.length) {
+        initDashboard(jsons.length === 1 ? jsons[0] : mergeJsons(jsons));
+        return;
       }
     }
   } catch(e) {}
 
-  // --- Fallback: try common single-file names ---
+  // ── Last resort: try well-known single filenames ────────────────────────────
   for (const filename of ['combined_data.json', 'data.json']) {
     try {
       setLabel(`Loading <span>${filename}</span>...`);
-      const res = await fetch(filename);
-      if (!res.ok) continue;
-      const text = await res.text();
-      initDashboard(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
-      return;
-    } catch(e) { continue; }
+      const data = await fetchAndParse(filename);
+      if (data) { initDashboard(data); return; }
+    } catch(e) {}
   }
 
-  // Nothing found — reveal the file picker
+  // Nothing worked — show the manual file picker
   showPicker();
 }
 
