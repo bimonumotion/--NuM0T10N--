@@ -1599,8 +1599,11 @@
     <button class="btn-load" onclick="document.getElementById('file-input').click()">Browse Files</button>
     <div class="or-demo">— or —</div>
     <button class="btn-demo" onclick="loadDemo()">Load Demo Data</button>
-    <p style="font-size:11px; color:var(--muted); margin-top:16px; font-family:var(--mono)">
-      Select all your <strong style="color:var(--accent)">combined_data_*.json</strong> files at once
+    <p style="font-size:11px; color:var(--muted); margin-top:20px; font-family:var(--mono); line-height:1.7; text-align:left; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:12px 16px;">
+      💡 <strong style="color:var(--accent)">Auto-load tip:</strong> To load automatically next time,<br>
+      place your <strong style="color:var(--text)">combined_data_*.json</strong> files inside a folder<br>
+      named <strong style="color:var(--green)">HDD/</strong> next to this <strong style="color:var(--text)">index.html</strong> file,<br>
+      then open via a local web server (e.g. <code style="color:var(--blue)">npx serve .</code>).
     </p>
   </div>
 
@@ -1833,10 +1836,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ============================================================
-//  AUTO-LOAD  — GitHub Pages: discovers all JSON files via API
-//              Local file://: falls back to file picker
+//  AUTO-LOAD
+//  Priority: HDD/ subfolder → root folder → file picker
+//  For file:// protocol → always shows file picker
 // ============================================================
 const SKIP_JSON = new Set(['filelist.json','package.json','package-lock.json','manifest.json']);
+const HDD_FOLDER = 'HDD';  // subfolder name to scan first
 
 async function fetchAndParse(url) {
   const r = await fetch(url);
@@ -1852,6 +1857,54 @@ function showPicker() {
   if (dropEl)    dropEl.style.display    = 'block';
 }
 
+// Helper: try loading all JSON files from a given base path
+async function tryLoadFromBase(base, setLabel) {
+  const prefix = base ? base + '/' : '';
+
+  // ── a. filelist.json manifest ──
+  try {
+    const list = await fetchAndParse(prefix + 'filelist.json');
+    if (Array.isArray(list) && list.length) {
+      const jsons = [];
+      for (const filename of list) {
+        try {
+          setLabel(`Loading <span>${filename}</span>...`);
+          const data = await fetchAndParse(prefix + filename);
+          if (data) jsons.push(data);
+        } catch(e) {}
+      }
+      if (jsons.length) return jsons;
+    }
+  } catch(e) {}
+
+  // ── b. combined_data_part0.json, part1, part2… sequential ──
+  {
+    const jsons = [];
+    for (let i = 0; i <= 999; i++) {
+      const name = `combined_data_part${i}.json`;
+      try {
+        const r = await fetch(prefix + name);
+        if (!r.ok) break;
+        setLabel(`Loading <span>${prefix + name}</span>...`);
+        const text = await r.text();
+        jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
+      } catch(e) { break; }
+    }
+    if (jsons.length) return jsons;
+  }
+
+  // ── c. Single well-known filenames ──
+  for (const name of ['combined_data.json', 'data.json']) {
+    try {
+      setLabel(`Trying <span>${prefix + name}</span>...`);
+      const data = await fetchAndParse(prefix + name);
+      if (data) return [data];
+    } catch(e) {}
+  }
+
+  return [];
+}
+
 async function autoLoadData() {
   const labelEl   = document.getElementById('loading-label');
   const loadingEl = document.getElementById('loading-state');
@@ -1862,134 +1915,74 @@ async function autoLoadData() {
   if (loadingEl) loadingEl.style.display = 'flex';
   if (dropEl)    dropEl.style.display    = 'none';
 
-  // ── 1. GitHub API: discover JSON files directly ───────────────────────────────
-  //       Works on any GitHub Pages host — case-insensitive matching.
-  if (location.protocol !== 'file:') {
+  // file:// protocol — browser security blocks fetch, show picker immediately
+  if (location.protocol === 'file:') { showPicker(); return; }
+
+  // ── 1. GitHub API: discover all JSON files (HDD/ subfolder + root) ─────────
+  try {
     const GH = { headers: { Accept: 'application/vnd.github+json' } };
     const owner = location.hostname.split('.')[0];
     const pathParts = location.pathname.split('/').filter(p => p && !/\.\w+$/.test(p));
     const repo = pathParts[0] || `${owner}.github.io`;
 
-    try {
-      setLabel(`Scanning <span>${owner}/${repo}</span> via GitHub API...`);
-      const repoData = await (await fetch(`https://api.github.com/repos/${owner}/${repo}`, GH)).json();
-      const branch = repoData.default_branch || 'main';
-      const treeData = await (await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, GH
-      )).json();
+    setLabel(`Scanning <span>${owner}/${repo}</span> via GitHub API...`);
+    const repoData = await (await fetch(`https://api.github.com/repos/${owner}/${repo}`, GH)).json();
+    const branch = repoData.default_branch || 'main';
+    const treeData = await (await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, GH
+    )).json();
 
-      const jsonFiles = (treeData.tree || [])
-        .filter(f => f.type === 'blob' && f.path.endsWith('.json') && !SKIP_JSON.has(f.path.split('/').pop()))
-        .sort((a, b) => a.path.localeCompare(b.path));
+    // Prefer HDD/ subfolder files, then root-level files
+    const allJsonFiles = (treeData.tree || [])
+      .filter(f => f.type === 'blob' && f.path.endsWith('.json') && !SKIP_JSON.has(f.path.split('/').pop()))
+      .sort((a, b) => {
+        const aInHDD = a.path.toLowerCase().startsWith(HDD_FOLDER.toLowerCase() + '/') ? 0 : 1;
+        const bInHDD = b.path.toLowerCase().startsWith(HDD_FOLDER.toLowerCase() + '/') ? 0 : 1;
+        return aInHDD - bInHDD || a.path.localeCompare(b.path);
+      });
 
-      if (jsonFiles.length) {
-        const raw = `https://media.githubusercontent.com/media/${owner}/${repo}/${branch}/`;
-        const jsons = [];
-        for (const file of jsonFiles) {
-          try {
-            setLabel(`Loading <span>${file.path.split('/').pop()}</span>...`);
-            const data = await fetchAndParse(raw + file.path);
-            if (data) jsons.push(data);
-          } catch(e) {}
-        }
-        if (jsons.length) {
-          const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
-          saveRecent(`${owner}/${repo} — ${new Date().toLocaleDateString()}`, merged);
-          initDashboard(merged);
-          return;
-        }
+    if (allJsonFiles.length) {
+      const raw = `https://media.githubusercontent.com/media/${owner}/${repo}/${branch}/`;
+      const jsons = [];
+      for (const file of allJsonFiles) {
+        try {
+          setLabel(`Loading <span>${file.path.split('/').pop()}</span>...`);
+          const data = await fetchAndParse(raw + file.path);
+          if (data) jsons.push(data);
+        } catch(e) {}
       }
-    } catch(e) {}
-  }
-
-  // ── 2. Probe combined_data_part0.json, part1, part2… until 404 ───────────────
-  //       Works on GitHub Pages and any HTTP server with no API needed.
-  if (location.protocol !== 'file:') {
-    setLabel('Looking for <span>combined_data_part*.json</span>...');
-    const jsons = [];
-    for (let i = 0; i <= 999; i++) {
-      const name = `combined_data_part${i}.json`;
-      try {
-        const r = await fetch(name);
-        if (!r.ok) break;
-        setLabel(`Loading <span>${name}</span>...`);
-        const text = await r.text();
-        jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
-      } catch(e) { break; }
-    }
-    if (jsons.length) {
-      setLabel(`Merging <span>${jsons.length} file(s)</span>...`);
-      const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
-      saveRecent(`Auto: ${jsons.length} part(s) — ${new Date().toLocaleDateString()}`, merged);
-      initDashboard(merged);
-      return;
-    }
-  }
-
-  // ── 2. filelist.json manifest ──────────────────────────────────────────────
-  if (location.protocol !== 'file:') {
-    try {
-      setLabel('Looking for <span>filelist.json</span>...');
-      const list = await fetchAndParse('filelist.json');
-      if (Array.isArray(list) && list.length) {
-        const jsons = [];
-        for (const filename of list) {
-          try {
-            setLabel(`Loading <span>${filename}</span>...`);
-            const data = await fetchAndParse(filename);
-            if (data) jsons.push(data);
-          } catch(e) {}
-        }
-        if (jsons.length) {
-          const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
-          saveRecent(`filelist.json — ${new Date().toLocaleDateString()}`, merged);
-          initDashboard(merged);
-          return;
-        }
+      if (jsons.length) {
+        const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
+        saveRecent(`${owner}/${repo} — ${new Date().toLocaleDateString()}`, merged);
+        initDashboard(merged);
+        return;
       }
-    } catch(e) {}
-  }
-
-  // ── 3. filelist.json manifest ──────────────────────────────────────────────
-  if (location.protocol !== 'file:') {
-    try {
-      setLabel('Looking for <span>filelist.json</span>...');
-      const list = await fetchAndParse('filelist.json');
-      if (Array.isArray(list) && list.length) {
-        const jsons = [];
-        for (const filename of list) {
-          try {
-            setLabel(`Loading <span>${filename}</span>...`);
-            const data = await fetchAndParse(filename);
-            if (data) jsons.push(data);
-          } catch(e) {}
-        }
-        if (jsons.length) {
-          const merged = jsons.length === 1 ? jsons[0] : mergeJsons(jsons);
-          saveRecent(`filelist.json — ${new Date().toLocaleDateString()}`, merged);
-          initDashboard(merged);
-          return;
-        }
-      }
-    } catch(e) {}
-  }
-
-  // ── 4. Single well-known filename fallback ─────────────────────────────────
-  if (location.protocol !== 'file:') {
-    for (const filename of ['combined_data.json', 'data.json']) {
-      try {
-        setLabel(`Trying <span>${filename}</span>...`);
-        const data = await fetchAndParse(filename);
-        if (data) {
-          saveRecent(`${filename} — ${new Date().toLocaleDateString()}`, data);
-          initDashboard(data);
-          return;
-        }
-      } catch(e) {}
     }
+  } catch(e) {}
+
+  // ── 2. HDD/ subfolder first ────────────────────────────────────────────────
+  setLabel(`Scanning <span>${HDD_FOLDER}/</span> folder...`);
+  const hddJsons = await tryLoadFromBase(HDD_FOLDER, setLabel);
+  if (hddJsons.length) {
+    setLabel(`Merging <span>${hddJsons.length} file(s)</span> from ${HDD_FOLDER}/...`);
+    const merged = hddJsons.length === 1 ? hddJsons[0] : mergeJsons(hddJsons);
+    saveRecent(`${HDD_FOLDER}/ — ${new Date().toLocaleDateString()}`, merged);
+    initDashboard(merged);
+    return;
   }
 
-  // Nothing found → show manual file picker
+  // ── 3. Root folder fallback ────────────────────────────────────────────────
+  setLabel('Scanning root folder...');
+  const rootJsons = await tryLoadFromBase('', setLabel);
+  if (rootJsons.length) {
+    setLabel(`Merging <span>${rootJsons.length} file(s)</span>...`);
+    const merged = rootJsons.length === 1 ? rootJsons[0] : mergeJsons(rootJsons);
+    saveRecent(`Auto: ${new Date().toLocaleDateString()}`, merged);
+    initDashboard(merged);
+    return;
+  }
+
+  // ── Nothing found → show manual file picker ────────────────────────────────
   showPicker();
 }
 
