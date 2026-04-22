@@ -1857,7 +1857,8 @@ function showPicker() {
   if (dropEl)    dropEl.style.display    = 'block';
 }
 
-// Helper: try loading all JSON files from a given base path
+// Helper: try loading all JSON files from a given base path.
+// Tags each loaded JSON's records with drive_name derived from its filename.
 async function tryLoadFromBase(base, setLabel) {
   const prefix = base ? base + '/' : '';
 
@@ -1870,7 +1871,7 @@ async function tryLoadFromBase(base, setLabel) {
         try {
           setLabel(`Loading <span>${filename}</span>...`);
           const data = await fetchAndParse(prefix + filename);
-          if (data) jsons.push(data);
+          if (data) { tagDriveFromFilename(data, filename); jsons.push(data); }
         } catch(e) {}
       }
       if (jsons.length) return jsons;
@@ -1887,7 +1888,9 @@ async function tryLoadFromBase(base, setLabel) {
         if (!r.ok) break;
         setLabel(`Loading <span>${prefix + name}</span>...`);
         const text = await r.text();
-        jsons.push(JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text));
+        const data = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text);
+        tagDriveFromFilename(data, name);
+        jsons.push(data);
       } catch(e) { break; }
     }
     if (jsons.length) return jsons;
@@ -1898,7 +1901,7 @@ async function tryLoadFromBase(base, setLabel) {
     try {
       setLabel(`Trying <span>${prefix + name}</span>...`);
       const data = await fetchAndParse(prefix + name);
-      if (data) return [data];
+      if (data) { tagDriveFromFilename(data, name); return [data]; }
     } catch(e) {}
   }
 
@@ -1946,9 +1949,10 @@ async function autoLoadData() {
       const jsons = [];
       for (const file of allJsonFiles) {
         try {
-          setLabel(`Loading <span>${file.path.split('/').pop()}</span>...`);
+          const fname = file.path.split('/').pop();
+          setLabel(`Loading <span>${fname}</span>...`);
           const data = await fetchAndParse(raw + file.path);
-          if (data) jsons.push(data);
+          if (data) { tagDriveFromFilename(data, fname); jsons.push(data); }
         } catch(e) {}
       }
       if (jsons.length) {
@@ -2207,6 +2211,29 @@ function readFileAsync(file) {
   });
 }
 
+// Derive a human drive label from a JSON filename
+// e.g. "2023_B_Drive.json" → "2023 B Drive"
+function driveNameFromFilename(filename) {
+  return filename
+    .replace(/\.json$/i, '')
+    .replace(/_/g, ' ')
+    .trim();
+}
+
+// Tag every record in a parsed JSON with drive_name derived from its filename.
+// Always overrides — the filename IS the drive identity.
+function tagDriveFromFilename(json, filename) {
+  const label = driveNameFromFilename(filename);
+  if (!label) return json;
+  if (json.files && Array.isArray(json.files)) {
+    json.files.forEach(f => {
+      f.drive_name = label;
+      f.hdd_label  = label;
+    });
+  }
+  return json;
+}
+
 async function readFiles(fileList) {
   const files = Array.from(fileList).filter(f => f.name.endsWith('.json'));
   if (!files.length) return;
@@ -2218,7 +2245,9 @@ async function readFiles(fileList) {
     try {
       let text = await readFileAsync(file);
       if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-      jsons.push(JSON.parse(text));
+      const json = JSON.parse(text);
+      tagDriveFromFilename(json, file.name);   // label every record with this file's name
+      jsons.push(json);
     } catch(e) {
       errors.push(file.name);
     }
@@ -2709,8 +2738,8 @@ function renderTable() {
     const dupeBadge = f.is_duplicate ? '<span class="dupe-badge">DUPE</span>' : '';
     html += `<tr class="row${dupeClass}" onclick="showDetail(${allData.indexOf(f)})" style="cursor:pointer">
       <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${start+i+1}</td>
-      <td style="font-family:var(--mono);font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.drive_name||f.drive||''}">
-        <span style="color:var(--text)">${f.drive_name || f.drive || '—'}</span>
+      <td style="font-family:var(--mono);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.drive_name||f.hdd_label||''}">
+        <span style="color:var(--accent)">${f.drive_name || f.hdd_label || '—'}</span>
       </td>
       <td class="td-project" title="${f.project}">${f.project||'—'}</td>
       <td class="td-path" title="${f.sub_folder}">${f.sub_folder||'—'}</td>
@@ -3064,7 +3093,7 @@ function showDetail(idx) {
     <div class="detail-row"><div class="detail-key">Size</div><div class="detail-val">${szStr} (${parseFloat(f.size_mb).toFixed(2)} MB)</div></div>
     <div class="detail-row"><div class="detail-key">Date Modified</div><div class="detail-val">${f.date_modified||'—'} ${f.time_modified||''}</div></div>
     <div class="detail-row"><div class="detail-key">Date Created</div><div class="detail-val">${f.date_created||'—'}</div></div>
-    <div class="detail-row"><div class="detail-key">Drive Label</div><div class="detail-val">${f.drive_name || f.drive || '—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Drive Name</div><div class="detail-val" style="color:var(--accent)">${f.drive_name || f.hdd_label || '—'}</div></div>
     <div class="detail-row">
       <div class="detail-key">Full Path</div>
       <div class="detail-val path-val" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}', this)" title="Click to copy">${f.path||'—'}</div>
