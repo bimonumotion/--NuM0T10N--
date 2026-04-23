@@ -2263,21 +2263,20 @@ async function readFiles(fileList) {
   const files = Array.from(fileList).filter(f => f.name.endsWith('.json'));
   if (!files.length) return;
 
-  // Read all files in parallel instead of one-by-one
-  const results = await Promise.allSettled(
-    files.map(async file => {
+  const jsons = [];
+  const errors = [];
+
+  for (const file of files) {
+    try {
       let text = await readFileAsync(file);
       if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       const json = JSON.parse(text);
       tagDriveFromFilename(json, file.name);   // label every record with this file's name
-      return json;
-    })
-  );
-
-  const jsons  = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-  const errors = results
-    .map((r, i) => r.status === 'rejected' ? files[i].name : null)
-    .filter(Boolean);
+      jsons.push(json);
+    } catch(e) {
+      errors.push(file.name);
+    }
+  }
 
   if (errors.length) {
     alert(`Could not parse:\n${errors.join('\n')}\n\nTip: Re-run merge.bat to regenerate these files.`);
