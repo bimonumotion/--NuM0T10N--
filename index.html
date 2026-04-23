@@ -599,10 +599,35 @@
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
   }
 
   thead th:hover { color: var(--accent); }
   thead th.sorted { color: var(--accent); }
+
+  .resizer {
+    position: absolute;
+    top: 0; right: 0;
+    width: 6px; height: 100%;
+    cursor: col-resize;
+    z-index: 2;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .resizer::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 100%;
+    background: rgba(255,255,255,0.25);
+    transition: background 0.15s, width 0.15s;
+  }
+  .resizer:hover::after, .resizer.resizing::after {
+    background: var(--accent);
+    width: 2px;
+  }
 
   .sort-arrow { margin-left: 4px; font-size: 10px; }
 
@@ -1692,6 +1717,14 @@
       <span class="filter-row-label">Filter</span>
       <div class="controls-sep"></div>
 
+      <div class="custom-select" id="filter-drive-wrap">
+        <input type="hidden" id="filter-drive" value="">
+        <div class="custom-select-trigger" id="filter-drive-trigger" onclick="toggleCustomSelect('filter-drive')">
+          <span id="filter-drive-label">All Drives</span>
+          <span class="custom-select-arrow">▾</span>
+        </div>
+        <div class="custom-select-dropdown" id="filter-drive-dropdown"></div>
+      </div>
       <div class="custom-select" id="filter-project-wrap">
         <input type="hidden" id="filter-project" value="">
         <div class="custom-select-trigger" id="filter-project-trigger" onclick="toggleCustomSelect('filter-project')">
@@ -1712,14 +1745,6 @@
       <select class="filter-select" id="filter-date" onchange="saveFilterState();applyFilters()">
         <option value="">All Dates</option>
       </select>
-      <div class="custom-select" id="filter-drive-wrap">
-        <input type="hidden" id="filter-drive" value="">
-        <div class="custom-select-trigger" id="filter-drive-trigger" onclick="toggleCustomSelect('filter-drive')">
-          <span id="filter-drive-label">All Drives</span>
-          <span class="custom-select-arrow">▾</span>
-        </div>
-        <div class="custom-select-dropdown" id="filter-drive-dropdown"></div>
-      </div>
       <select class="filter-select" id="filter-dupe" onchange="saveFilterState();applyFilters()">
         <option value="">All Files</option>
         <option value="dupe">Dupes Only</option>
@@ -2721,12 +2746,11 @@ function renderTable() {
       <th>#</th>
       <th>Drive Label</th>
       <th onclick="tableSort('project')">Project <span class="sort-arrow">↕</span></th>
-      <th>Sub-folder</th>
       <th onclick="tableSort('name')">File Name <span class="sort-arrow">↕</span></th>
       <th onclick="tableSort('extension')">Type <span class="sort-arrow">↕</span></th>
       <th onclick="tableSort('size_mb')">Size <span class="sort-arrow">↕</span></th>
       <th onclick="tableSort('date_modified')">Date <span class="sort-arrow">↕</span></th>
-      <th>Original Drive</th>
+      <th>Sub-folder</th>
       <th>Path</th>
       <th>Copy</th>
     </tr></thead><tbody>`;
@@ -2742,14 +2766,11 @@ function renderTable() {
         <span style="color:var(--accent)">${f.drive_name || f.hdd_label || '—'}</span>
       </td>
       <td class="td-project" title="${f.project}">${f.project||'—'}</td>
-      <td class="td-path" title="${f.sub_folder}">${f.sub_folder||'—'}</td>
       <td class="td-name" title="${f.name}">${f.name}${dupeBadge}</td>
       <td><span class="td-ext">${(f.extension||'?').toUpperCase()}</span></td>
       <td class="td-size">${szStr}</td>
       <td class="td-date">${f.date_modified||'—'}</td>
-      <td style="font-family:var(--mono);font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.original_drive_label||'—'}">
-        ${f.is_duplicate ? '<span style="color:var(--red)">'+(f.original_drive_label||'—')+'</span>' : '<span style="color:var(--muted)">—</span>'}
-      </td>
+      <td class="td-path" title="${f.sub_folder}">${f.sub_folder||'—'}</td>
       <td class="td-path" title="${f.path}" style="max-width:200px">${(f.path||'').replace(/\\/g,'\\')}</td>
       <td onclick="event.stopPropagation()">
         <button class="copy-btn" onclick="copyPath('${(f.path||'').replace(/'/g,"\\'")}', this)">Copy</button>
@@ -2793,6 +2814,7 @@ function renderTable() {
   }
 
   container.innerHTML = html;
+  makeColumnsResizable();
 }
 
 function pagRange(cur, total) {
@@ -3146,6 +3168,59 @@ document.addEventListener('keydown', e => {
     document.getElementById('search-input').focus();
   }
 });
+
+function makeColumnsResizable() {
+  const table = document.querySelector('#view-table table');
+  if (!table) return;
+  const ths = Array.from(table.querySelectorAll('thead th'));
+
+  // Lock current rendered widths then switch to fixed layout
+  ths.forEach(th => { th.style.width = th.getBoundingClientRect().width + 'px'; });
+  table.style.tableLayout = 'fixed';
+  table.style.width = 'max-content';
+  table.style.minWidth = '100%';
+
+  ths.forEach((th, i) => {
+    if (i === ths.length - 1) return; // skip Copy column
+    const resizer = document.createElement('div');
+    resizer.className = 'resizer';
+    th.appendChild(resizer);
+
+    resizer.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.pageX;
+      const startW = th.getBoundingClientRect().width;
+      resizer.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      let dragged = false;
+
+      const onMove = ev => {
+        const delta = ev.pageX - startX;
+        if (Math.abs(delta) > 2) dragged = true;
+        th.style.width = Math.max(40, startW + delta) + 'px';
+      };
+      const onUp = () => {
+        resizer.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        // Suppress the click event that fires after mouseup on the th,
+        // otherwise it triggers tableSort() and re-renders the table.
+        if (dragged) {
+          th.addEventListener('click', ev => {
+            ev.stopPropagation();
+            ev.preventDefault();
+          }, { capture: true, once: true });
+        }
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
 </script>
 </body>
 </html>
